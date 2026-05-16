@@ -2,6 +2,7 @@ import importlib
 
 MODULES = [
     "src.api.main",
+    "src.database.check_schema",
     "src.entity_resolution.blocking",
     "src.entity_resolution.features",
     "src.entity_resolution.run_pipeline",
