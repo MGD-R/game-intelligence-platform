@@ -27,6 +27,7 @@ sql/        future SQL transformations by layer
 Roadmap for the first data-stage work: [docs/data_stage_roadmap.md](docs/data_stage_roadmap.md).
 Docker/PostgreSQL bootstrap commands: [docs/docker_db_bootstrap.md](docs/docker_db_bootstrap.md).
 Database storage design: [docs/database_schema.md](docs/database_schema.md).
+Ingestion framework notes: [docs/ingestion_framework.md](docs/ingestion_framework.md).
 
 ## Quick Start
 
@@ -52,6 +53,7 @@ make up-dev
 make test
 make lint
 make check-sources
+make quota-status
 make rawg
 make wikidata
 make staging
