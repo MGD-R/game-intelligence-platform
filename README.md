@@ -26,6 +26,7 @@ sql/        future SQL transformations by layer
 
 Roadmap for the first data-stage work: [docs/data_stage_roadmap.md](docs/data_stage_roadmap.md).
 Docker/PostgreSQL bootstrap commands: [docs/docker_db_bootstrap.md](docs/docker_db_bootstrap.md).
+Database storage design: [docs/database_schema.md](docs/database_schema.md).
 
 ## Quick Start
 
@@ -34,6 +35,7 @@ cp .env.example .env
 cp .env.secrets.example .env.secrets
 make build
 make up
+make db-check
 curl http://localhost:8000/health
 ```
 
