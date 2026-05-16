@@ -6,6 +6,9 @@ Agents.md
 # Environment and secrets
 .env
 .env.*
+.env.secrets
+.env.local
+.envrc
 !.env.example
 !.env.secrets.example
 
@@ -30,6 +33,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+htmlcov/
 .ipynb_checkpoints/
 .venv/
 build/
