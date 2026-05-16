@@ -28,6 +28,7 @@ Roadmap for the first data-stage work: [docs/data_stage_roadmap.md](docs/data_st
 Docker/PostgreSQL bootstrap commands: [docs/docker_db_bootstrap.md](docs/docker_db_bootstrap.md).
 Database storage design: [docs/database_schema.md](docs/database_schema.md).
 Ingestion framework notes: [docs/ingestion_framework.md](docs/ingestion_framework.md).
+RAWG ingestion flow: [docs/rawg_ingestion.md](docs/rawg_ingestion.md).
 
 ## Quick Start
 
@@ -53,6 +54,10 @@ make up-dev
 make test
 make lint
 make check-sources
+make rawg-check
+make rawg-reference
+make rawg-index
+make rawg-staging
 make quota-status
 make rawg
 make wikidata
@@ -63,6 +68,7 @@ make rag
 ```
 
 These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
+`make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
 
 ## API Endpoints
 
