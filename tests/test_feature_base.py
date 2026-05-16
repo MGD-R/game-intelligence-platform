@@ -17,6 +17,7 @@ def test_basic_name_similarity_and_release_year_diff() -> None:
         platforms={"pc", "playstation 5"},
         developers={"rockstar north"},
         publishers={"rockstar games"},
+        evidence_sources={"rawg"},
         has_description=True,
     )
     wikidata = SourceGameRecord(
@@ -31,6 +32,7 @@ def test_basic_name_similarity_and_release_year_diff() -> None:
         platforms={"pc"},
         developers={"rockstar north"},
         publishers={"rockstar games"},
+        evidence_sources={"wikidata", "rawg", "steam"},
         has_description=True,
     )
     row = build_feature_row({"pair_id": "pair-1"}, rawg, wikidata)
@@ -40,6 +42,8 @@ def test_basic_name_similarity_and_release_year_diff() -> None:
     assert row["release_year_diff"] == 0
     assert row["external_id_exact_match"] is True
     assert row["platform_jaccard"] == 0.5
+    assert row["description_language_match"] is None
+    assert row["source_count_signal"] == 3
 
 
 def test_missing_values_are_reported_in_features_json() -> None:

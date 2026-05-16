@@ -34,10 +34,12 @@ def main(argv: list[str] | None = None) -> int:
         "source_aliases": output_dir / "source_aliases.parquet",
         "source_external_ids": output_dir / "source_external_ids.parquet",
         "source_genres": output_dir / "source_genres.parquet",
+        "source_tags": output_dir / "source_tags.parquet",
         "source_platforms": output_dir / "source_platforms.parquet",
         "source_companies": output_dir / "source_companies.parquet",
         "source_descriptions": output_dir / "source_descriptions.parquet",
         "source_ratings": output_dir / "source_ratings.parquet",
+        "source_popularity": output_dir / "source_popularity.parquet",
         "entity_candidate_pairs": output_dir / "entity_candidate_pairs.parquet",
         "entity_resolution_feature_base": output_dir / "entity_resolution_feature_base.parquet",
     }
@@ -66,6 +68,10 @@ def main(argv: list[str] | None = None) -> int:
         repository.fetch_staging_rows("stg.source_game_genres", limit=args.limit),
     )
     write_parquet(
+        outputs["source_tags"],
+        repository.fetch_staging_rows("stg.source_game_tags", limit=args.limit),
+    )
+    write_parquet(
         outputs["source_platforms"],
         repository.fetch_staging_rows("stg.source_game_platforms", limit=args.limit),
     )
@@ -80,6 +86,10 @@ def main(argv: list[str] | None = None) -> int:
     write_parquet(
         outputs["source_ratings"],
         repository.fetch_staging_rows("stg.source_game_ratings", limit=args.limit),
+    )
+    write_parquet(
+        outputs["source_popularity"],
+        repository.fetch_staging_rows("stg.source_game_popularity", limit=args.limit),
     )
     write_parquet(
         outputs["entity_candidate_pairs"],

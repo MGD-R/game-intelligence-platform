@@ -48,6 +48,8 @@ class SourceGameRecord:
     developers: set[str] = field(default_factory=set)
     publishers: set[str] = field(default_factory=set)
     url_types: set[str] = field(default_factory=set)
+    description_languages: set[str] = field(default_factory=set)
+    evidence_sources: set[str] = field(default_factory=set)
     has_description: bool = False
 
     @property
@@ -72,6 +74,7 @@ def _ensure_record(records: dict[tuple[str, str], SourceGameRecord], row: dict[s
         name=str(row["name"]),
         name_normalized=(str(row["name_normalized"]) if row.get("name_normalized") else None),
         release_year=int(row["release_year"]) if row.get("release_year") is not None else None,
+        evidence_sources={str(row["source"])},
     )
 
 
@@ -98,6 +101,7 @@ def load_source_records(repository: IngestionRepository) -> dict[tuple[str, str]
         if record is None:
             continue
         record.external_ids[str(row["external_source"])] = str(row["external_id"])
+        record.evidence_sources.add(str(row["external_source"]))
 
     for row in repository.fetch_staging_rows("stg.source_game_genres"):
         key = (str(row["source"]), str(row["source_game_id"]))
@@ -142,11 +146,16 @@ def load_source_records(repository: IngestionRepository) -> dict[tuple[str, str]
         record = records.get(key)
         if record is not None and row.get("description_text"):
             record.has_description = True
+            if row.get("language"):
+                record.description_languages.add(str(row["language"]))
 
     for row in repository.fetch_staging_rows("stg.source_game_urls"):
         key = (str(row["source"]), str(row["source_game_id"]))
         record = records.get(key)
         if record is not None and row.get("url_type"):
-            record.url_types.add(str(row["url_type"]))
+            url_type = str(row["url_type"])
+            record.url_types.add(url_type)
+            if url_type in {"ruwiki", "enwiki", "page"}:
+                record.evidence_sources.add("wikipedia")
 
     return records

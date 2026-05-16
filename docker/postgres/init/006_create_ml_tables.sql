@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS ml.entity_resolution_features (
     genre_jaccard NUMERIC(8, 6),
     tag_jaccard NUMERIC(8, 6),
     description_available_flag BOOLEAN NOT NULL DEFAULT FALSE,
+    description_language_match BOOLEAN,
+    source_count_signal INTEGER,
     features_json JSONB NOT NULL DEFAULT '{}'::JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

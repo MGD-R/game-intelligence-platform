@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from src.entity_resolution.build_candidate_pairs import generate_candidate_pairs
+from src.entity_resolution.build_candidate_pairs import (
+    generate_candidate_pairs,
+    summarize_candidate_pairs,
+)
 from src.entity_resolution.corpus import SourceGameRecord
 
 
@@ -50,3 +53,10 @@ def test_unrelated_names_do_not_create_candidate_pair() -> None:
 
     assert len(pairs) == 1
     assert all(pair["source_id_b"] != "Q99999" for pair in pairs)
+
+
+def test_candidate_summary_counts_manual_review_rows() -> None:
+    summary = summarize_candidate_pairs(generate_candidate_pairs(build_records()))
+
+    assert summary["candidate_pair_count"] >= 1
+    assert summary["positive_weak_label_count"] == 1

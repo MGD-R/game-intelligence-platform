@@ -32,6 +32,7 @@ def load_yaml_config(name: str) -> dict[str, Any]:
 def load_all_configs() -> dict[str, dict[str, Any]]:
     return {
         "app": load_yaml_config("app"),
+        "data_stage": load_yaml_config("data_stage"),
         "database": load_yaml_config("database"),
         "logging": load_yaml_config("logging"),
         "model": load_yaml_config("model"),

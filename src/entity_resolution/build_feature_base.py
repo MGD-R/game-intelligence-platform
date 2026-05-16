@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 
 from src.entity_resolution.corpus import (
     SourceGameRecord,
@@ -60,6 +61,14 @@ def build_feature_row(
     if tag_jaccard is None:
         reasons["tag_jaccard"] = "missing tag data"
     description_available_flag = source_a.has_description and source_b.has_description
+    description_language_match = None
+    if source_a.description_languages and source_b.description_languages:
+        description_language_match = bool(
+            source_a.description_languages & source_b.description_languages
+        )
+    else:
+        reasons["description_language_match"] = "missing description languages"
+    source_count_signal = len(source_a.evidence_sources | source_b.evidence_sources) or None
 
     return {
         "pair_id": str(pair["pair_id"]),
@@ -73,12 +82,40 @@ def build_feature_row(
         "genre_jaccard": genre_jaccard,
         "tag_jaccard": tag_jaccard,
         "description_available_flag": description_available_flag,
+        "description_language_match": description_language_match,
+        "source_count_signal": source_count_signal,
         "features_json": {
             "reasons": reasons,
             "alias_overlap_count": len(alias_overlap),
             "source_a_has_description": source_a.has_description,
             "source_b_has_description": source_b.has_description,
+            "source_a_description_languages": sorted(source_a.description_languages),
+            "source_b_description_languages": sorted(source_b.description_languages),
+            "source_a_evidence_sources": sorted(source_a.evidence_sources),
+            "source_b_evidence_sources": sorted(source_b.evidence_sources),
         },
+    }
+
+
+def summarize_feature_rows(feature_rows: list[dict[str, object]]) -> dict[str, object]:
+    missing_reasons = Counter()
+    for row in feature_rows:
+        reasons = row.get("features_json", {}).get("reasons", {})
+        if isinstance(reasons, dict):
+            missing_reasons.update(str(key) for key in reasons)
+
+    return {
+        "feature_pair_count": len(feature_rows),
+        "description_available_count": sum(
+            bool(row.get("description_available_flag")) for row in feature_rows
+        ),
+        "description_language_match_count": sum(
+            bool(row.get("description_language_match")) for row in feature_rows
+        ),
+        "external_id_exact_match_count": sum(
+            bool(row.get("external_id_exact_match")) for row in feature_rows
+        ),
+        "missing_feature_reason_count": dict(sorted(missing_reasons.items())),
     }
 
 
@@ -90,6 +127,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Preview feature-base generation without writing.",
     )
     parser.add_argument("--limit", type=int, help="Optional pair limit.")
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Delete existing feature rows before rebuild.",
+    )
     return parser
 
 
@@ -99,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             {
                 "limit": args.limit,
+                "rebuild": args.rebuild,
                 "writes_to": "ml.entity_resolution_features",
             }
         )
@@ -106,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
 
     repository = IngestionRepository()
     ensure_stage_inputs(repository)
+    if args.rebuild:
+        repository.delete_entity_resolution_features()
     records = load_source_records(repository)
     pairs = repository.fetch_candidate_pairs(limit=args.limit)
     if not pairs:
@@ -113,14 +158,16 @@ def main(argv: list[str] | None = None) -> int:
             "No candidate pairs available. Run `make match-external-ids` "
             "and `make candidate-pairs` first."
         )
+    feature_rows: list[dict[str, object]] = []
     for pair in pairs:
         key_a = (str(pair["source_a"]), str(pair["source_id_a"]))
         key_b = (str(pair["source_b"]), str(pair["source_id_b"]))
         if key_a not in records or key_b not in records:
             continue
         feature_row = build_feature_row(pair, records[key_a], records[key_b])
+        feature_rows.append(feature_row)
         repository.upsert_entity_resolution_features(**feature_row)
-    print({"feature_pair_count": len(pairs)})
+    print(summarize_feature_rows(feature_rows))
     return 0
 
 

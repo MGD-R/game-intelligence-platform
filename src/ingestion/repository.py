@@ -546,6 +546,21 @@ class IngestionRepository:
             with connection.cursor() as cursor:
                 cursor.execute("DELETE FROM ml.entity_candidate_pairs")
 
+    def delete_entity_resolution_features(self) -> None:
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM ml.entity_resolution_features")
+
+    def ensure_entity_resolution_feature_columns(self) -> None:
+        query = """
+            ALTER TABLE ml.entity_resolution_features
+                ADD COLUMN IF NOT EXISTS description_language_match BOOLEAN,
+                ADD COLUMN IF NOT EXISTS source_count_signal INTEGER
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+
     def upsert_entity_resolution_features(
         self,
         *,
@@ -560,10 +575,13 @@ class IngestionRepository:
         genre_jaccard: float | None,
         tag_jaccard: float | None,
         description_available_flag: bool,
+        description_language_match: bool | None,
+        source_count_signal: int | None,
         features_json: Mapping[str, object],
     ) -> None:
         from psycopg.types.json import Jsonb
 
+        self.ensure_entity_resolution_feature_columns()
         query = """
             INSERT INTO ml.entity_resolution_features (
                 pair_id,
@@ -577,9 +595,11 @@ class IngestionRepository:
                 genre_jaccard,
                 tag_jaccard,
                 description_available_flag,
+                description_language_match,
+                source_count_signal,
                 features_json
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (pair_id)
             DO UPDATE
             SET name_similarity = EXCLUDED.name_similarity,
@@ -592,6 +612,8 @@ class IngestionRepository:
                 genre_jaccard = EXCLUDED.genre_jaccard,
                 tag_jaccard = EXCLUDED.tag_jaccard,
                 description_available_flag = EXCLUDED.description_available_flag,
+                description_language_match = EXCLUDED.description_language_match,
+                source_count_signal = EXCLUDED.source_count_signal,
                 features_json = EXCLUDED.features_json
         """
         with self.connection() as connection:
@@ -610,6 +632,8 @@ class IngestionRepository:
                         genre_jaccard,
                         tag_jaccard,
                         description_available_flag,
+                        description_language_match,
+                        source_count_signal,
                         Jsonb(dict(features_json)),
                     ),
                 )

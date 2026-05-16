@@ -34,6 +34,7 @@ External ID matching and candidate corpus: [docs/external_id_matching.md](docs/e
 Staging normalization and data-quality layer: [docs/staging_data_quality.md](docs/staging_data_quality.md).
 Steam targeted enrichment: [docs/steam_enrichment.md](docs/steam_enrichment.md).
 Wikipedia summaries enrichment: [docs/wikipedia_summaries.md](docs/wikipedia_summaries.md).
+ML-ready datasets and final data-stage build: [docs/ml_ready_datasets.md](docs/ml_ready_datasets.md).
 
 ## Quick Start
 
@@ -81,6 +82,11 @@ make validate-staging
 make dq
 make anomalies
 make export-analysis
+make validate-ml-data
+make manual-review-seed
+make export-ml-ready
+make dataset-manifest
+make ml-ready-data
 make quota-status
 make rawg
 make wikidata
@@ -97,6 +103,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make wikipedia` runs the targeted summaries pipeline (`wikipedia-pages`, `wikipedia-load`, `wikipedia-staging`) and does not use broad search or opensearch by default.
 `make entity-data-base` prepares deterministic matches, candidate pairs, feature rows, reports, and parquet exports without calling external APIs.
 `make data-quality` validates staging prerequisites, rebuilds normalized staging rows, writes DQ and anomaly reports, and exports analysis-ready parquet snapshots.
+`make ml-ready-data` finalizes the local data stage: validation, candidate/feature refresh, DQ artifacts, manual review seed, parquet exports, and dataset manifest, again without external API calls.
 
 ## API Endpoints
 

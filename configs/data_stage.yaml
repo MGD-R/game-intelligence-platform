@@ -1,0 +1,26 @@
+data_stage:
+  sources:
+    required:
+      - rawg
+      - wikidata
+    optional:
+      - steam
+      - wikipedia
+      - igdb
+  paths:
+    processed_dir: data/processed
+    reports_dir: data/artifacts/reports
+    manifests_dir: data/artifacts/manifests
+  exports:
+    format: parquet
+    include_optional_sources: true
+  quality_thresholds:
+    min_rawg_games: 1
+    min_wikidata_games: 1
+    min_candidate_pairs: 1
+    warn_missing_description_rate: 0.5
+    warn_missing_release_year_rate: 0.5
+  entity_resolution:
+    auto_positive_label_source: external_id
+    include_basic_features: true
+    include_embeddings: false

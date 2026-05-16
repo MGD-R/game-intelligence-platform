@@ -199,6 +199,10 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate source coverage reports.")
     parser.add_argument(
+        "--report-dir",
+        default=str(project_root() / "data" / "artifacts" / "reports"),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview report generation without DB reads or file writes.",
@@ -208,7 +212,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    report_dir = project_root() / "data" / "artifacts" / "reports"
+    report_dir = Path(args.report_dir)
     if args.dry_run:
         print(
             {

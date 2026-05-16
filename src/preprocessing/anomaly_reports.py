@@ -134,6 +134,10 @@ def build_anomaly_rows(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate rule-based anomaly reports.")
     parser.add_argument(
+        "--report-dir",
+        default=str(project_root() / "data" / "artifacts" / "reports"),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview anomaly report path without DB reads.",
@@ -143,7 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    report_path = project_root() / "data" / "artifacts" / "reports" / "anomaly_report.csv"
+    report_path = Path(args.report_dir) / "anomaly_report.csv"
     if args.dry_run:
         print({"report": str(report_path)})
         return 0

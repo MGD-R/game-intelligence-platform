@@ -9,7 +9,8 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
-	validate-staging dq anomalies export-analysis data-quality \
+	validate-staging validate-ml-data manual-review-seed dataset-manifest export-ml-ready \
+	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er recommendations rag demo-data all
 
 build:
@@ -199,6 +200,28 @@ anomalies:
 export-analysis:
 	$(COMPOSE) up -d postgres
 	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_analysis_data
+
+validate-ml-data:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.validate_ml_ready_data
+
+manual-review-seed:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_manual_review_seed
+
+dataset-manifest:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.build_dataset_manifest
+
+export-ml-ready:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_ml_ready_datasets
+
+ml-ready-data:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.build_ml_ready_datasets
+
+data-stage: validate-ml-data staging match-external-ids candidate-pairs feature-base dq anomalies export-analysis manual-review-seed export-ml-ready dataset-manifest
 
 data-quality: validate-staging staging dq anomalies export-analysis
 

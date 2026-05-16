@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 
 from src.entity_resolution.corpus import (
     SourceGameRecord,
@@ -21,6 +22,23 @@ CANDIDATE_SOURCES = (
     "same_release_year_and_similar_name",
     "shared_alias",
 )
+
+
+def summarize_candidate_pairs(pairs: list[dict[str, object]]) -> dict[str, object]:
+    count_by_source = Counter(str(pair.get("candidate_source") or "unknown") for pair in pairs)
+    positive_weak_label_count = sum(
+        str(pair.get("label_value") or "") == "1" for pair in pairs
+    )
+    manual_review_candidate_count = sum(
+        pair.get("label_value") is None and (pair.get("confidence") or 0) >= 0.7
+        for pair in pairs
+    )
+    return {
+        "candidate_pair_count": len(pairs),
+        "candidate_pair_count_by_source": dict(sorted(count_by_source.items())),
+        "positive_weak_label_count": positive_weak_label_count,
+        "manual_review_candidate_count": manual_review_candidate_count,
+    }
 
 
 def build_indexes(
@@ -200,6 +218,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "candidate_source": args.candidate_source,
                 "limit": args.limit,
+                "rebuild": args.rebuild,
                 "writes_to": "ml.entity_candidate_pairs",
             }
         )
@@ -219,12 +238,10 @@ def main(argv: list[str] | None = None) -> int:
     for pair in pairs:
         repository.upsert_candidate_pair(**pair)
         inserted += 1
-    print(
-        {
-            "candidate_source": args.candidate_source,
-            "candidate_pair_count": inserted,
-        }
-    )
+    summary = summarize_candidate_pairs(pairs)
+    summary["candidate_source"] = args.candidate_source
+    summary["inserted_pair_count"] = inserted
+    print(summary)
     return 0
 
 

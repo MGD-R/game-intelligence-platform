@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -12,9 +14,30 @@ from src.preprocessing.validate_data_stage_inputs import ensure_stage_inputs
 from src.utils.config import project_root
 
 
-def write_parquet(path: Path, rows: list[dict[str, object]]) -> None:
+def _normalize_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return json.dumps(value, sort_keys=True, ensure_ascii=True)
+    if isinstance(value, list):
+        return json.dumps(value, sort_keys=False, ensure_ascii=True)
+    return value
+
+
+def write_parquet(
+    path: Path,
+    rows: list[dict[str, object]],
+    *,
+    schema: dict[str, pl.DataType] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    frame = pl.DataFrame(rows or [{"status": "empty"}])
+    if rows:
+        normalized_rows = [
+            {key: _normalize_value(value) for key, value in row.items()} for row in rows
+        ]
+        frame = pl.DataFrame(normalized_rows, schema=schema)
+    elif schema:
+        frame = pl.DataFrame(schema=schema)
+    else:
+        frame = pl.DataFrame([{"status": "empty"}])
     frame.write_parquet(path)
 
 
