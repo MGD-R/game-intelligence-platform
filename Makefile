@@ -6,9 +6,10 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	db-check test lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
+	steam-check steam-appids steam-details steam-staging steam-demo steam \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
 	validate-staging dq anomalies export-analysis data-quality \
-	steam wikipedia staging er recommendations rag demo-data all
+	wikipedia staging er recommendations rag demo-data all
 
 build:
 	$(COMPOSE) build app worker
@@ -139,7 +140,24 @@ export-ml-base:
 entity-data-base: match-external-ids candidate-pairs feature-base source-coverage export-ml-base
 
 steam:
-	$(WORKER_RUN) python -m src.ingestion.steam_client
+	$(MAKE) steam-demo
+
+steam-check:
+	$(WORKER_RUN) python -m src.ingestion.steam_client --check --dry-run --app-id 271590
+
+steam-appids:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.select_steam_appids
+
+steam-details:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.load_steam_details
+
+steam-staging:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.steam_to_staging
+
+steam-demo: steam-appids steam-details steam-staging
 
 wikipedia:
 	$(WORKER_RUN) python -m src.ingestion.wikipedia_client

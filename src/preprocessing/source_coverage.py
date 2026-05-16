@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -15,14 +16,26 @@ from src.utils.config import project_root
 
 
 def compute_coverage_metrics(
-    records, candidate_pairs: list[dict[str, Any]]
+    records,
+    candidate_pairs: list[dict[str, Any]],
+    *,
+    source_game_rows: list[dict[str, Any]] | None = None,
+    description_rows: list[dict[str, Any]] | None = None,
+    rating_rows: list[dict[str, Any]] | None = None,
+    popularity_rows: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     rawg_records = [record for key, record in records.items() if key[0] == "rawg"]
     wikidata_records = [record for key, record in records.items() if key[0] == "wikidata"]
+    steam_records = [record for key, record in records.items() if key[0] == "steam"]
     wikidata_rawg_ids = {
         record.external_ids["rawg"]
         for record in wikidata_records
         if "rawg" in record.external_ids
+    }
+    wikidata_steam_ids = {
+        record.external_ids["steam"]
+        for record in wikidata_records
+        if "steam" in record.external_ids
     }
     deterministic_matches = [
         pair for pair in candidate_pairs if pair.get("label_source") == "wikidata_rawg_external_id"
@@ -40,24 +53,67 @@ def compute_coverage_metrics(
 
     rawg_game_count = len(rawg_records)
     wikidata_game_count = len(wikidata_records)
+    steam_game_count = len(steam_records)
     matched_rawg_ids = {str(pair["source_id_a"]) for pair in deterministic_matches}
     matched_wikidata_ids = {str(pair["source_id_b"]) for pair in deterministic_matches}
     rawg_wikidata_match_rate = round(
         len(matched_rawg_ids) / rawg_game_count,
         6,
     ) if rawg_game_count else 0.0
+    source_counts = Counter(key[0] for key in records)
+    steam_source_game_rows = [
+        row for row in (source_game_rows or []) if row.get("source") == "steam"
+    ]
+    steam_descriptions = [
+        row for row in (description_rows or []) if row.get("source") == "steam"
+    ]
+    steam_ratings = [row for row in (rating_rows or []) if row.get("source") == "steam"]
+    steam_popularity = [
+        row for row in (popularity_rows or []) if row.get("source") == "steam"
+    ]
+    steam_with_short_description_ids = {
+        str(row["source_game_id"])
+        for row in steam_descriptions
+        if row.get("description_type") == "short_description" and row.get("description_text")
+    }
+    steam_with_supported_languages_ids = {
+        str(row["source_game_id"])
+        for row in steam_source_game_rows
+        if isinstance(row.get("quality_flags_json"), dict)
+        and row["quality_flags_json"].get("has_supported_languages")
+    }
+    steam_with_recommendations_ids = {
+        str(row["source_game_id"])
+        for row in steam_popularity
+        if row.get("metric_name") == "recommendations_total" and row.get("metric_value") is not None
+    }
+    steam_with_metacritic_ids = {
+        str(row["source_game_id"])
+        for row in steam_ratings
+        if row.get("rating_type") == "steam_metacritic" and row.get("rating_value") is not None
+    }
+    steam_enrichment_coverage_rate = round(
+        steam_game_count / len(wikidata_steam_ids),
+        6,
+    ) if wikidata_steam_ids else 0.0
     metrics = {
         "rawg_game_count": rawg_game_count,
         "wikidata_game_count": wikidata_game_count,
         "wikidata_rawg_external_id_count": len(wikidata_rawg_ids),
+        "wikidata_steam_appid_count": len(wikidata_steam_ids),
         "rawg_wikidata_matched_count": len(deterministic_matches),
         "rawg_wikidata_match_rate": rawg_wikidata_match_rate,
         "positive_weak_label_count": len(deterministic_matches),
         "unmatched_rawg_count": rawg_game_count - len(matched_rawg_ids),
         "unmatched_wikidata_count": wikidata_game_count - len(matched_wikidata_ids),
-        "steam_appid_count_from_wikidata": sum(
-            "steam" in record.external_ids for record in wikidata_records
-        ),
+        "steam_appid_count_from_wikidata": len(wikidata_steam_ids),
+        "steam_game_count": steam_game_count,
+        "steam_appdetails_count": steam_game_count,
+        "steam_with_short_description_count": len(steam_with_short_description_ids),
+        "steam_with_supported_languages_count": len(steam_with_supported_languages_ids),
+        "steam_with_recommendations_count": len(steam_with_recommendations_ids),
+        "steam_with_metacritic_count": len(steam_with_metacritic_ids),
+        "steam_enrichment_coverage_rate": steam_enrichment_coverage_rate,
         "igdb_id_count_from_wikidata": sum(
             "igdb" in record.external_ids for record in wikidata_records
         ),
@@ -65,15 +121,15 @@ def compute_coverage_metrics(
         "enwiki_sitelink_count": sum("enwiki" in record.url_types for record in wikidata_records),
     }
     source_rows = [
-        {"source": "rawg", "game_count": rawg_game_count},
-        {"source": "wikidata", "game_count": wikidata_game_count},
+        {"source": source_name, "game_count": count}
+        for source_name, count in sorted(source_counts.items())
     ]
     external_id_rows = [
         {"source": "wikidata", "external_source": "rawg", "count": len(wikidata_rawg_ids)},
         {
             "source": "wikidata",
             "external_source": "steam",
-            "count": sum("steam" in record.external_ids for record in wikidata_records),
+            "count": len(wikidata_steam_ids),
         },
         {
             "source": "wikidata",
@@ -128,6 +184,10 @@ def main(argv: list[str] | None = None) -> int:
     metrics, source_rows, external_id_rows, candidate_summary = compute_coverage_metrics(
         records,
         candidate_pairs,
+        source_game_rows=repository.fetch_staging_rows("stg.source_games"),
+        description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
+        rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
+        popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),
     )
     write_csv(report_dir / "source_coverage.csv", source_rows)
     write_csv(report_dir / "external_id_coverage.csv", external_id_rows)

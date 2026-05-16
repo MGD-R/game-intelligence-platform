@@ -1,0 +1,41 @@
+{
+  "271590": {
+    "success": true,
+    "data": {
+      "steam_appid": 271590,
+      "name": "Grand Theft Auto V",
+      "type": "game",
+      "is_free": false,
+      "required_age": 18,
+      "supported_languages": "English, Russian",
+      "controller_support": "full",
+      "platforms": {
+        "windows": true,
+        "mac": false,
+        "linux": false
+      },
+      "categories": [
+        {"id": 2, "description": "Single-player"},
+        {"id": 1, "description": "Multi-player"}
+      ],
+      "genres": [
+        {"id": "1", "description": "Action"},
+        {"id": "2", "description": "Adventure"}
+      ],
+      "release_date": {
+        "coming_soon": false,
+        "date": "14 Apr, 2015"
+      },
+      "developers": ["Rockstar North"],
+      "publishers": ["Rockstar Games"],
+      "price_overview": {"final": 149900, "currency": "RUB"},
+      "metacritic": {"score": 96},
+      "recommendations": {"total": 1782345},
+      "short_description": "Open world action game.",
+      "detailed_description": "Detailed Steam description.",
+      "about_the_game": "About the Steam game.",
+      "header_image": "https://cdn.example.com/header.jpg",
+      "website": "https://www.rockstargames.com/V/"
+    }
+  }
+}

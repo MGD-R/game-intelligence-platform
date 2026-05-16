@@ -26,11 +26,23 @@ sources:
     demo_limit: 5000
     timeout_seconds: 10
   steam:
-    enabled: false
+    enabled: true
     tier: optional
     base_url: https://store.steampowered.com/api
     api_key_env: STEAM_API_KEY
+    web_api_base_url: https://api.steampowered.com
+    store_api_base_url: https://store.steampowered.com/api
+    partner_api_base_url: https://partner.steam-api.com
     timeout_seconds: 10
+    requests_per_second: 1
+    cache_enabled: true
+    use_store_appdetails: true
+    use_istore_service: false
+    use_app_list: false
+    strategy: targeted_enrichment_by_steam_appid
+    default_language: russian
+    default_country: ru
+    demo_limit: 50
     rate_limit_per_minute: 30
   wikipedia:
     enabled: false

@@ -31,6 +31,11 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def compute_data_quality_metrics(
     records: dict[tuple[str, str], SourceGameRecord],
     candidate_pairs: list[dict[str, Any]],
+    *,
+    source_game_rows: list[dict[str, Any]] | None = None,
+    description_rows: list[dict[str, Any]] | None = None,
+    rating_rows: list[dict[str, Any]] | None = None,
+    popularity_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     by_source: dict[str, list[SourceGameRecord]] = defaultdict(list)
     for (source, _), record in records.items():
@@ -148,6 +153,26 @@ def compute_data_quality_metrics(
     candidate_pair_summary = Counter(
         str(pair.get("candidate_source") or "unknown") for pair in candidate_pairs
     )
+    wikidata_steam_ids = {
+        record.external_ids["steam"]
+        for (_, _), record in records.items()
+        if record.source == "wikidata" and "steam" in record.external_ids
+    }
+    steam_records = {
+        record.source_game_id
+        for (_, _), record in records.items()
+        if record.source == "steam"
+    }
+    steam_source_game_rows = [
+        row for row in (source_game_rows or []) if row.get("source") == "steam"
+    ]
+    steam_description_rows = [
+        row for row in (description_rows or []) if row.get("source") == "steam"
+    ]
+    steam_rating_rows = [row for row in (rating_rows or []) if row.get("source") == "steam"]
+    steam_popularity_rows = [
+        row for row in (popularity_rows or []) if row.get("source") == "steam"
+    ]
 
     summary = {
         "record_count_by_source": record_count_by_source,
@@ -193,6 +218,45 @@ def compute_data_quality_metrics(
         "language_coverage": dict(language_coverage),
         "external_id_coverage": dict(external_id_coverage),
         "candidate_pair_summary": dict(candidate_pair_summary),
+        "steam_game_count": len(steam_records),
+        "steam_appdetails_count": len(steam_records),
+        "wikidata_steam_appid_count": len(wikidata_steam_ids),
+        "steam_with_short_description_count": len(
+            {
+                str(row["source_game_id"])
+                for row in steam_description_rows
+                if row.get("description_type") == "short_description"
+                and row.get("description_text")
+            }
+        ),
+        "steam_with_supported_languages_count": len(
+            {
+                str(row["source_game_id"])
+                for row in steam_source_game_rows
+                if isinstance(row.get("quality_flags_json"), dict)
+                and row["quality_flags_json"].get("has_supported_languages")
+            }
+        ),
+        "steam_with_recommendations_count": len(
+            {
+                str(row["source_game_id"])
+                for row in steam_popularity_rows
+                if row.get("metric_name") == "recommendations_total"
+                and row.get("metric_value") is not None
+            }
+        ),
+        "steam_with_metacritic_count": len(
+            {
+                str(row["source_game_id"])
+                for row in steam_rating_rows
+                if row.get("rating_type") == "steam_metacritic"
+                and row.get("rating_value") is not None
+            }
+        ),
+        "steam_enrichment_coverage_rate": round(
+            len(steam_records) / len(wikidata_steam_ids),
+            6,
+        ) if wikidata_steam_ids else 0.0,
         "field_completeness_by_source": field_completeness_by_source,
         "missingness_report": missingness_report,
         "conflict_report": conflict_report,
@@ -237,7 +301,14 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError(validation_error_message(validation))
     records = load_source_records(repository)
     candidate_pairs = repository.fetch_candidate_pairs()
-    summary = compute_data_quality_metrics(records, candidate_pairs)
+    summary = compute_data_quality_metrics(
+        records,
+        candidate_pairs,
+        source_game_rows=repository.fetch_staging_rows("stg.source_games"),
+        description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
+        rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
+        popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),
+    )
 
     report_dir.mkdir(parents=True, exist_ok=True)
     with (report_dir / "dq_summary.json").open("w", encoding="utf-8") as handle:

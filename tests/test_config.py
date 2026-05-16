@@ -10,4 +10,4 @@ def test_all_configs_load() -> None:
 def test_enabled_sources_match_mvp_scope() -> None:
     sources = enabled_sources()
 
-    assert sources["enabled"] == ["rawg", "wikidata"]
+    assert sources["enabled"] == ["rawg", "wikidata", "steam"]

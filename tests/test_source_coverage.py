@@ -47,10 +47,43 @@ def test_coverage_metrics_are_calculated() -> None:
     metrics, source_rows, external_id_rows, candidate_summary = compute_coverage_metrics(
         build_records(),
         pairs,
+        source_game_rows=[
+            {
+                "source": "steam",
+                "source_game_id": "271590",
+                "quality_flags_json": {"has_supported_languages": True},
+            }
+        ],
+        description_rows=[
+            {
+                "source": "steam",
+                "source_game_id": "271590",
+                "description_type": "short_description",
+                "description_text": "Open world action game.",
+            }
+        ],
+        rating_rows=[
+            {
+                "source": "steam",
+                "source_game_id": "271590",
+                "rating_type": "steam_metacritic",
+                "rating_value": 96,
+            }
+        ],
+        popularity_rows=[
+            {
+                "source": "steam",
+                "source_game_id": "271590",
+                "metric_name": "recommendations_total",
+                "metric_value": 1782345,
+            }
+        ],
     )
 
     assert metrics["rawg_game_count"] == 1
     assert metrics["rawg_wikidata_matched_count"] == 1
+    assert metrics["wikidata_steam_appid_count"] == 1
+    assert metrics["steam_with_short_description_count"] == 1
     assert source_rows[0]["source"] == "rawg"
     assert any(row["external_source"] == "steam" for row in external_id_rows)
     assert candidate_summary["external_id_positive"] == 1
