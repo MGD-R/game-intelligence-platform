@@ -16,6 +16,7 @@ SECRET_KEYS = {
     "password",
     "postgres_password",
     "token",
+    "user_agent",
 }
 
 
