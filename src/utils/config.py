@@ -34,6 +34,7 @@ def load_all_configs() -> dict[str, dict[str, Any]]:
         "app": load_yaml_config("app"),
         "data_stage": load_yaml_config("data_stage"),
         "database": load_yaml_config("database"),
+        "entity_resolution": load_yaml_config("entity_resolution"),
         "logging": load_yaml_config("logging"),
         "model": load_yaml_config("model"),
         "sources": load_yaml_config("sources"),

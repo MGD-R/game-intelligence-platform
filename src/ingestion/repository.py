@@ -561,6 +561,27 @@ class IngestionRepository:
             with connection.cursor() as cursor:
                 cursor.execute(query)
 
+    def ensure_entity_resolution_predictions_table(self) -> None:
+        query = """
+            CREATE TABLE IF NOT EXISTS ml.entity_resolution_predictions (
+                prediction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                pair_id UUID NOT NULL
+                    REFERENCES ml.entity_candidate_pairs (pair_id)
+                    ON DELETE CASCADE,
+                model_name TEXT NOT NULL,
+                model_version TEXT NOT NULL,
+                same_game_probability NUMERIC(8, 6) NOT NULL,
+                decision TEXT NOT NULL,
+                threshold_policy_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+                explanation_factors_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+                predicted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (pair_id, model_name, model_version)
+            )
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+
     def upsert_entity_resolution_features(
         self,
         *,
@@ -652,6 +673,91 @@ class IngestionRepository:
         if limit is not None:
             query += " LIMIT %s"
             params = (limit,)
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return list(cursor.fetchall())
+
+    def delete_entity_resolution_predictions(self, *, model_name: str | None = None) -> None:
+        query = "DELETE FROM ml.entity_resolution_predictions"
+        params: tuple[object, ...] = ()
+        if model_name is not None:
+            query += " WHERE model_name = %s"
+            params = (model_name,)
+        self.ensure_entity_resolution_predictions_table()
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+
+    def upsert_entity_resolution_prediction(
+        self,
+        *,
+        pair_id: str,
+        model_name: str,
+        model_version: str,
+        same_game_probability: float,
+        decision: str,
+        threshold_policy_json: Mapping[str, object],
+        explanation_factors_json: Mapping[str, object],
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        self.ensure_entity_resolution_predictions_table()
+        query = """
+            INSERT INTO ml.entity_resolution_predictions (
+                pair_id,
+                model_name,
+                model_version,
+                same_game_probability,
+                decision,
+                threshold_policy_json,
+                explanation_factors_json
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (pair_id, model_name, model_version)
+            DO UPDATE
+            SET same_game_probability = EXCLUDED.same_game_probability,
+                decision = EXCLUDED.decision,
+                threshold_policy_json = EXCLUDED.threshold_policy_json,
+                explanation_factors_json = EXCLUDED.explanation_factors_json,
+                predicted_at = NOW()
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (
+                        pair_id,
+                        model_name,
+                        model_version,
+                        same_game_probability,
+                        decision,
+                        Jsonb(dict(threshold_policy_json)),
+                        Jsonb(dict(explanation_factors_json)),
+                    ),
+                )
+
+    def fetch_entity_resolution_predictions(
+        self,
+        *,
+        model_name: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        self.ensure_entity_resolution_predictions_table()
+        clauses = ["1 = 1"]
+        params: list[object] = []
+        if model_name is not None:
+            clauses.append("model_name = %s")
+            params.append(model_name)
+        query = f"""
+            SELECT *
+            FROM ml.entity_resolution_predictions
+            WHERE {' AND '.join(clauses)}
+            ORDER BY predicted_at DESC, prediction_id ASC
+        """
+        if limit is not None:
+            query += " LIMIT %s"
+            params.append(limit)
         with self.connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, params)

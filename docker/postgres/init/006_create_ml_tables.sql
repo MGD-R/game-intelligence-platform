@@ -31,3 +31,16 @@ CREATE TABLE IF NOT EXISTS ml.entity_resolution_features (
     features_json JSONB NOT NULL DEFAULT '{}'::JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS ml.entity_resolution_predictions (
+    prediction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pair_id UUID NOT NULL REFERENCES ml.entity_candidate_pairs (pair_id) ON DELETE CASCADE,
+    model_name TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    same_game_probability NUMERIC(8, 6) NOT NULL,
+    decision TEXT NOT NULL,
+    threshold_policy_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+    explanation_factors_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+    predicted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (pair_id, model_name, model_version)
+);

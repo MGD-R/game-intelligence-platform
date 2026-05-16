@@ -64,3 +64,5 @@ def test_sql_files_cover_expected_tables() -> None:
 def test_schema_checker_metadata_is_stable() -> None:
     assert expected_table_count() == 31
     assert "source_games" in EXPECTED_TABLES["stg"]
+    ml_sql = read_file("sql/ml/create_ml_tables.sql")
+    assert "CREATE TABLE IF NOT EXISTS ml.entity_resolution_predictions" in ml_sql
