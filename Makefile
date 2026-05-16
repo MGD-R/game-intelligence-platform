@@ -45,7 +45,7 @@ db-shell:
 
 db-check:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) exec -T postgres sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('\''raw'\'','\''stg'\'','\''ml'\'','\''dm'\'','\''meta'\'') ORDER BY schema_name;"'
+	$(COMPOSE) run --rm --no-deps worker python -m src.database.check_schema
 
 test:
 	$(WORKER_RUN) python -m pytest
