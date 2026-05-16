@@ -45,10 +45,21 @@ sources:
     demo_limit: 50
     rate_limit_per_minute: 30
   wikipedia:
-    enabled: false
+    enabled: true
     tier: optional
     base_url: https://en.wikipedia.org/api/rest_v1
+    rest_base_url_template: https://{lang}.wikipedia.org/api/rest_v1
+    action_api_url_template: https://{lang}.wikipedia.org/w/api.php
     user_agent_env: WIKIMEDIA_USER_AGENT
+    requests_per_minute: 120
+    cache_enabled: true
+    prefer_sitelinks_from_wikidata: true
+    use_opensearch: false
+    default_languages:
+      - ru
+      - en
+    demo_limit: 100
+    strategy: summaries_by_wikidata_sitelinks
     timeout_seconds: 10
     rate_limit_per_minute: 30
   igdb:

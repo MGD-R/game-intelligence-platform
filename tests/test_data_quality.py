@@ -32,6 +32,14 @@ def build_records() -> dict[tuple[str, str], SourceGameRecord]:
             external_ids={"steam": "10"},
             has_description=True,
         ),
+        ("wikipedia", "12345"): SourceGameRecord(
+            source="wikipedia",
+            source_game_id="12345",
+            name="Game One",
+            name_normalized="game one",
+            release_year=None,
+            has_description=True,
+        ),
     }
 
 
@@ -63,6 +71,13 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
                 "source_game_id": "10",
                 "description_type": "short_description",
                 "description_text": "Short description",
+            },
+            {
+                "source": "wikipedia",
+                "source_game_id": "12345",
+                "description_type": "summary",
+                "description_text": "Short wiki summary",
+                "language": "en",
             }
         ],
         rating_rows=[
@@ -81,6 +96,15 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
                 "metric_value": 10,
             }
         ],
+        url_rows=[
+            {
+                "source": "wikipedia",
+                "source_game_id": "12345",
+                "url_type": "page",
+                "url": "https://en.wikipedia.org/wiki/Sample_Game",
+                "source_specific_json": {"language": "en"},
+            }
+        ],
     )
     assert summary["record_count_by_source"]["rawg"] == 1
     assert summary["source_overlap_count"] == 1
@@ -88,3 +112,6 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
     assert summary["candidate_pair_summary"]["external_id_positive"] == 1
     assert summary["steam_game_count"] == 1
     assert summary["steam_with_metacritic_count"] == 1
+    assert summary["wikipedia_page_count"] == 1
+    assert summary["wikipedia_summary_count"] == 1
+    assert summary["short_wikipedia_extract_count"] == 1

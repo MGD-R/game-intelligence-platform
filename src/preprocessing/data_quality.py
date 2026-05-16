@@ -36,6 +36,7 @@ def compute_data_quality_metrics(
     description_rows: list[dict[str, Any]] | None = None,
     rating_rows: list[dict[str, Any]] | None = None,
     popularity_rows: list[dict[str, Any]] | None = None,
+    url_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     by_source: dict[str, list[SourceGameRecord]] = defaultdict(list)
     for (source, _), record in records.items():
@@ -173,6 +174,59 @@ def compute_data_quality_metrics(
     steam_popularity_rows = [
         row for row in (popularity_rows or []) if row.get("source") == "steam"
     ]
+    wikipedia_description_rows = [
+        row for row in (description_rows or []) if row.get("source") == "wikipedia"
+    ]
+    wikipedia_url_rows = [
+        row for row in (url_rows or []) if row.get("source") == "wikipedia"
+    ]
+    wikipedia_page_ids = {str(row["source_game_id"]) for row in wikipedia_url_rows}
+    wikipedia_summary_ids = {
+        str(row["source_game_id"])
+        for row in wikipedia_description_rows
+        if row.get("description_type") == "summary" and row.get("description_text")
+    }
+    missing_wikipedia_extract_count = len(
+        {
+            str(row["source_game_id"])
+            for row in wikipedia_description_rows
+            if not str(row.get("description_text") or "").strip()
+        }
+    )
+    short_wikipedia_extract_count = len(
+        {
+            str(row["source_game_id"])
+            for row in wikipedia_description_rows
+            if 0 < len(str(row.get("description_text") or "").strip()) < 80
+        }
+    )
+    wikipedia_ru_page_ids = {
+        str(row["source_game_id"])
+        for row in wikipedia_url_rows
+        if isinstance(row.get("source_specific_json"), dict)
+        and row["source_specific_json"].get("language") == "ru"
+    }
+    wikipedia_en_page_ids = {
+        str(row["source_game_id"])
+        for row in wikipedia_url_rows
+        if isinstance(row.get("source_specific_json"), dict)
+        and row["source_specific_json"].get("language") == "en"
+    }
+    wikidata_ruwiki_sitelink_count = sum(
+        "ruwiki" in record.url_types
+        for (_, _), record in records.items()
+        if record.source == "wikidata"
+    )
+    wikidata_enwiki_sitelink_count = sum(
+        "enwiki" in record.url_types
+        for (_, _), record in records.items()
+        if record.source == "wikidata"
+    )
+    wikipedia_summary_coverage_rate = round(
+        len(wikipedia_summary_ids)
+        / (wikidata_ruwiki_sitelink_count + wikidata_enwiki_sitelink_count),
+        6,
+    ) if (wikidata_ruwiki_sitelink_count + wikidata_enwiki_sitelink_count) else 0.0
 
     summary = {
         "record_count_by_source": record_count_by_source,
@@ -257,6 +311,15 @@ def compute_data_quality_metrics(
             len(steam_records) / len(wikidata_steam_ids),
             6,
         ) if wikidata_steam_ids else 0.0,
+        "wikipedia_page_count": len(wikipedia_page_ids),
+        "wikipedia_ru_page_count": len(wikipedia_ru_page_ids),
+        "wikipedia_en_page_count": len(wikipedia_en_page_ids),
+        "wikipedia_summary_count": len(wikipedia_summary_ids),
+        "wikidata_ruwiki_sitelink_count": wikidata_ruwiki_sitelink_count,
+        "wikidata_enwiki_sitelink_count": wikidata_enwiki_sitelink_count,
+        "wikipedia_summary_coverage_rate": wikipedia_summary_coverage_rate,
+        "missing_wikipedia_extract_count": missing_wikipedia_extract_count,
+        "short_wikipedia_extract_count": short_wikipedia_extract_count,
         "field_completeness_by_source": field_completeness_by_source,
         "missingness_report": missingness_report,
         "conflict_report": conflict_report,
@@ -308,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
         description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
         rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
         popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),
+        url_rows=repository.fetch_staging_rows("stg.source_game_urls"),
     )
 
     report_dir.mkdir(parents=True, exist_ok=True)

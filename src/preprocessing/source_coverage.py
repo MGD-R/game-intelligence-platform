@@ -23,6 +23,7 @@ def compute_coverage_metrics(
     description_rows: list[dict[str, Any]] | None = None,
     rating_rows: list[dict[str, Any]] | None = None,
     popularity_rows: list[dict[str, Any]] | None = None,
+    url_rows: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     rawg_records = [record for key, record in records.items() if key[0] == "rawg"]
     wikidata_records = [record for key, record in records.items() if key[0] == "wikidata"]
@@ -71,6 +72,10 @@ def compute_coverage_metrics(
     steam_popularity = [
         row for row in (popularity_rows or []) if row.get("source") == "steam"
     ]
+    wikipedia_descriptions = [
+        row for row in (description_rows or []) if row.get("source") == "wikipedia"
+    ]
+    wikipedia_urls = [row for row in (url_rows or []) if row.get("source") == "wikipedia"]
     steam_with_short_description_ids = {
         str(row["source_game_id"])
         for row in steam_descriptions
@@ -96,6 +101,36 @@ def compute_coverage_metrics(
         steam_game_count / len(wikidata_steam_ids),
         6,
     ) if wikidata_steam_ids else 0.0
+    wikipedia_page_ids = {str(row["source_game_id"]) for row in wikipedia_urls}
+    wikipedia_ru_page_ids = {
+        str(row["source_game_id"])
+        for row in wikipedia_urls
+        if isinstance(row.get("source_specific_json"), dict)
+        and row["source_specific_json"].get("language") == "ru"
+    }
+    wikipedia_en_page_ids = {
+        str(row["source_game_id"])
+        for row in wikipedia_urls
+        if isinstance(row.get("source_specific_json"), dict)
+        and row["source_specific_json"].get("language") == "en"
+    }
+    wikipedia_summary_ids = {
+        str(row["source_game_id"])
+        for row in wikipedia_descriptions
+        if row.get("description_type") == "summary" and row.get("description_text")
+    }
+    source_counts["wikipedia"] = max(
+        source_counts.get("wikipedia", 0),
+        len(wikipedia_page_ids),
+    )
+    wikipedia_sitelink_total = (
+        sum("ruwiki" in record.url_types for record in wikidata_records)
+        + sum("enwiki" in record.url_types for record in wikidata_records)
+    )
+    wikipedia_summary_coverage_rate = round(
+        len(wikipedia_summary_ids) / wikipedia_sitelink_total,
+        6,
+    ) if wikipedia_sitelink_total else 0.0
     metrics = {
         "rawg_game_count": rawg_game_count,
         "wikidata_game_count": wikidata_game_count,
@@ -119,6 +154,17 @@ def compute_coverage_metrics(
         ),
         "ruwiki_sitelink_count": sum("ruwiki" in record.url_types for record in wikidata_records),
         "enwiki_sitelink_count": sum("enwiki" in record.url_types for record in wikidata_records),
+        "wikipedia_page_count": len(wikipedia_page_ids),
+        "wikipedia_ru_page_count": len(wikipedia_ru_page_ids),
+        "wikipedia_en_page_count": len(wikipedia_en_page_ids),
+        "wikipedia_summary_count": len(wikipedia_summary_ids),
+        "wikidata_ruwiki_sitelink_count": sum(
+            "ruwiki" in record.url_types for record in wikidata_records
+        ),
+        "wikidata_enwiki_sitelink_count": sum(
+            "enwiki" in record.url_types for record in wikidata_records
+        ),
+        "wikipedia_summary_coverage_rate": wikipedia_summary_coverage_rate,
     }
     source_rows = [
         {"source": source_name, "game_count": count}
@@ -188,6 +234,7 @@ def main(argv: list[str] | None = None) -> int:
         description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
         rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
         popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),
+        url_rows=repository.fetch_staging_rows("stg.source_game_urls"),
     )
     write_csv(report_dir / "source_coverage.csv", source_rows)
     write_csv(report_dir / "external_id_coverage.csv", external_id_rows)

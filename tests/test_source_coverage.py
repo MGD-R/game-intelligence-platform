@@ -60,6 +60,13 @@ def test_coverage_metrics_are_calculated() -> None:
                 "source_game_id": "271590",
                 "description_type": "short_description",
                 "description_text": "Open world action game.",
+            },
+            {
+                "source": "wikipedia",
+                "source_game_id": "12345",
+                "description_type": "summary",
+                "language": "ru",
+                "description_text": "Краткая справка.",
             }
         ],
         rating_rows=[
@@ -78,12 +85,27 @@ def test_coverage_metrics_are_calculated() -> None:
                 "metric_value": 1782345,
             }
         ],
+        url_rows=[
+            {
+                "source": "wikipedia",
+                "source_game_id": "12345",
+                "url_type": "page",
+                "url": (
+                    "https://ru.wikipedia.org/wiki/"
+                    "%D0%9F%D1%80%D0%B8%D0%BC%D0%B5%D1%80_%D0%B8%D0%B3%D1%80%D1%8B"
+                ),
+                "source_specific_json": {"language": "ru"},
+            }
+        ],
     )
 
     assert metrics["rawg_game_count"] == 1
     assert metrics["rawg_wikidata_matched_count"] == 1
     assert metrics["wikidata_steam_appid_count"] == 1
     assert metrics["steam_with_short_description_count"] == 1
+    assert metrics["wikipedia_page_count"] == 1
+    assert metrics["wikipedia_ru_page_count"] == 1
+    assert metrics["wikipedia_summary_count"] == 1
     assert source_rows[0]["source"] == "rawg"
     assert any(row["external_source"] == "steam" for row in external_id_rows)
     assert candidate_summary["external_id_positive"] == 1

@@ -7,9 +7,10 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
+	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
 	validate-staging dq anomalies export-analysis data-quality \
-	wikipedia staging er recommendations rag demo-data all
+	staging er recommendations rag demo-data all
 
 build:
 	$(COMPOSE) build app worker
@@ -160,7 +161,24 @@ steam-staging:
 steam-demo: steam-appids steam-details steam-staging
 
 wikipedia:
-	$(WORKER_RUN) python -m src.ingestion.wikipedia_client
+	$(MAKE) wikipedia-demo
+
+wikipedia-check:
+	$(WORKER_RUN) python -m src.ingestion.wikipedia_client --check --dry-run --language en --title Minecraft
+
+wikipedia-pages:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.select_wikipedia_pages
+
+wikipedia-load:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.load_wikipedia_pages
+
+wikipedia-staging:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.wikipedia_to_staging
+
+wikipedia-demo: wikipedia-pages wikipedia-load wikipedia-staging
 
 validate-staging:
 	$(COMPOSE) up -d postgres

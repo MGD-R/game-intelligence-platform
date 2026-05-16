@@ -1,0 +1,13 @@
+{
+  "type": "standard",
+  "title": "Sample Game",
+  "displaytitle": "Sample Game",
+  "pageid": 67890,
+  "lang": "en",
+  "extract": "Short English summary for the game.",
+  "content_urls": {
+    "desktop": {
+      "page": "https://en.wikipedia.org/wiki/Sample_Game"
+    }
+  }
+}
