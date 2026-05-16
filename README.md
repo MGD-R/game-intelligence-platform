@@ -24,6 +24,9 @@ data/       local data directories kept out of Git
 sql/        future SQL transformations by layer
 ```
 
+Roadmap for the first data-stage work: [docs/data_stage_roadmap.md](docs/data_stage_roadmap.md).
+Docker/PostgreSQL bootstrap commands: [docs/docker_db_bootstrap.md](docs/docker_db_bootstrap.md).
+
 ## Quick Start
 
 ```bash
