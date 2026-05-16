@@ -395,6 +395,244 @@ class IngestionRepository:
                 cursor.execute(query)
                 return list(cursor.fetchall())
 
+    def fetch_staging_rows(
+        self,
+        table_name: str,
+        *,
+        source: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        schema_name, table = table_name.split(".", maxsplit=1)
+        clauses = [sql.SQL("1 = 1")]
+        params: list[object] = []
+        if source is not None:
+            clauses.append(sql.SQL("source = %s"))
+            params.append(source)
+        limit_sql = sql.SQL("")
+        if limit is not None:
+            limit_sql = sql.SQL(" LIMIT %s")
+            params.append(limit)
+        query = sql.SQL(
+            """
+            SELECT *
+            FROM {table}
+            WHERE {where_clause}
+            ORDER BY 1, 2
+            """
+        ).format(
+            table=sql.Identifier(schema_name, table),
+            where_clause=sql.SQL(" AND ").join(clauses),
+        ) + limit_sql
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return list(cursor.fetchall())
+
+    def count_rows(self, table_name: str, *, source: str | None = None) -> int:
+        schema_name, table = table_name.split(".", maxsplit=1)
+        clauses = [sql.SQL("1 = 1")]
+        params: list[object] = []
+        if source is not None:
+            clauses.append(sql.SQL("source = %s"))
+            params.append(source)
+        query = sql.SQL(
+            """
+            SELECT COUNT(*) AS row_count
+            FROM {table}
+            WHERE {where_clause}
+            """
+        ).format(
+            table=sql.Identifier(schema_name, table),
+            where_clause=sql.SQL(" AND ").join(clauses),
+        )
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                row = cursor.fetchone()
+                return int(row["row_count"])
+
+    def fetch_existing_tables(self, *, schemas: list[str]) -> set[tuple[str, str]]:
+        query = """
+            SELECT table_schema, table_name
+            FROM information_schema.tables
+            WHERE table_type = 'BASE TABLE'
+              AND table_schema = ANY(%s)
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, (schemas,))
+                return {(row["table_schema"], row["table_name"]) for row in cursor.fetchall()}
+
+    def upsert_candidate_pair(
+        self,
+        *,
+        source_a: str,
+        source_id_a: str,
+        source_b: str,
+        source_id_b: str,
+        candidate_source: str | None,
+        label_source: str | None,
+        label_value: str | None,
+        confidence: float | None,
+    ) -> str:
+        query = """
+            INSERT INTO ml.entity_candidate_pairs (
+                source_a,
+                source_id_a,
+                source_b,
+                source_id_b,
+                candidate_source,
+                label_source,
+                label_value,
+                confidence
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (source_a, source_id_a, source_b, source_id_b)
+            DO UPDATE
+            SET candidate_source = CASE
+                    WHEN ml.entity_candidate_pairs.label_value IS NOT NULL
+                        THEN ml.entity_candidate_pairs.candidate_source
+                    ELSE COALESCE(
+                        ml.entity_candidate_pairs.candidate_source,
+                        EXCLUDED.candidate_source
+                    )
+                END,
+                label_source = COALESCE(
+                    ml.entity_candidate_pairs.label_source,
+                    EXCLUDED.label_source
+                ),
+                label_value = COALESCE(ml.entity_candidate_pairs.label_value, EXCLUDED.label_value),
+                confidence = GREATEST(
+                    COALESCE(ml.entity_candidate_pairs.confidence, 0),
+                    COALESCE(EXCLUDED.confidence, 0)
+                )
+            RETURNING pair_id
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (
+                        source_a,
+                        source_id_a,
+                        source_b,
+                        source_id_b,
+                        candidate_source,
+                        label_source,
+                        label_value,
+                        confidence,
+                    ),
+                )
+                row = cursor.fetchone()
+                return str(row["pair_id"])
+
+    def fetch_candidate_pairs(self, *, limit: int | None = None) -> list[dict[str, Any]]:
+        query = """
+            SELECT *
+            FROM ml.entity_candidate_pairs
+            ORDER BY created_at ASC, pair_id ASC
+        """
+        params: tuple[object, ...] = ()
+        if limit is not None:
+            query += " LIMIT %s"
+            params = (limit,)
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return list(cursor.fetchall())
+
+    def delete_candidate_pairs(self) -> None:
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM ml.entity_candidate_pairs")
+
+    def upsert_entity_resolution_features(
+        self,
+        *,
+        pair_id: str,
+        name_similarity: float | None,
+        alias_similarity: float | None,
+        release_year_diff: int | None,
+        external_id_exact_match: bool | None,
+        developer_overlap: float | None,
+        publisher_overlap: float | None,
+        platform_jaccard: float | None,
+        genre_jaccard: float | None,
+        tag_jaccard: float | None,
+        description_available_flag: bool,
+        features_json: Mapping[str, object],
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        query = """
+            INSERT INTO ml.entity_resolution_features (
+                pair_id,
+                name_similarity,
+                alias_similarity,
+                release_year_diff,
+                external_id_exact_match,
+                developer_overlap,
+                publisher_overlap,
+                platform_jaccard,
+                genre_jaccard,
+                tag_jaccard,
+                description_available_flag,
+                features_json
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (pair_id)
+            DO UPDATE
+            SET name_similarity = EXCLUDED.name_similarity,
+                alias_similarity = EXCLUDED.alias_similarity,
+                release_year_diff = EXCLUDED.release_year_diff,
+                external_id_exact_match = EXCLUDED.external_id_exact_match,
+                developer_overlap = EXCLUDED.developer_overlap,
+                publisher_overlap = EXCLUDED.publisher_overlap,
+                platform_jaccard = EXCLUDED.platform_jaccard,
+                genre_jaccard = EXCLUDED.genre_jaccard,
+                tag_jaccard = EXCLUDED.tag_jaccard,
+                description_available_flag = EXCLUDED.description_available_flag,
+                features_json = EXCLUDED.features_json
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (
+                        pair_id,
+                        name_similarity,
+                        alias_similarity,
+                        release_year_diff,
+                        external_id_exact_match,
+                        developer_overlap,
+                        publisher_overlap,
+                        platform_jaccard,
+                        genre_jaccard,
+                        tag_jaccard,
+                        description_available_flag,
+                        Jsonb(dict(features_json)),
+                    ),
+                )
+
+    def fetch_entity_resolution_features(
+        self,
+        *,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        query = """
+            SELECT *
+            FROM ml.entity_resolution_features
+            ORDER BY created_at ASC, pair_id ASC
+        """
+        params: tuple[object, ...] = ()
+        if limit is not None:
+            query += " LIMIT %s"
+            params = (limit,)
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return list(cursor.fetchall())
+
     def replace_source_staging_rows(
         self,
         *,

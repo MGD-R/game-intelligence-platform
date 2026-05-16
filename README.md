@@ -30,6 +30,7 @@ Database storage design: [docs/database_schema.md](docs/database_schema.md).
 Ingestion framework notes: [docs/ingestion_framework.md](docs/ingestion_framework.md).
 RAWG ingestion flow: [docs/rawg_ingestion.md](docs/rawg_ingestion.md).
 Wikidata identity ingestion: [docs/wikidata_ingestion.md](docs/wikidata_ingestion.md).
+External ID matching and candidate corpus: [docs/external_id_matching.md](docs/external_id_matching.md).
 
 ## Quick Start
 
@@ -62,6 +63,11 @@ make rawg-staging
 make wikidata-check
 make wikidata-identity
 make wikidata-staging
+make match-external-ids
+make candidate-pairs
+make feature-base
+make source-coverage
+make export-ml-base
 make quota-status
 make rawg
 make wikidata
@@ -74,6 +80,7 @@ make rag
 These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
 `make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
 `make wikidata` runs the safe demo pipeline (`wikidata-identity`, `wikidata-staging`) and does not request EntityData by default.
+`make entity-data-base` prepares deterministic matches, candidate pairs, feature rows, reports, and parquet exports without calling external APIs.
 
 ## API Endpoints
 
