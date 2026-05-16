@@ -1,0 +1,202 @@
+name: game-intelligence-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gip-postgres
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-gip}"
+      POSTGRES_USER: "${POSTGRES_USER:-gip}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-change-me}"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gip} -d ${POSTGRES_DB:-gip}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - gip-net
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: gip-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: "${APP_NAME:-game-intelligence-platform}"
+      APP_ENV: "${APP_ENV:-local}"
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
+      APP_HOST: "${APP_HOST:-0.0.0.0}"
+      APP_PORT: "${APP_PORT:-8000}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://gip:change-me@postgres:5432/gip}"
+      DATABASE_CONNECT_TIMEOUT: "${DATABASE_CONNECT_TIMEOUT:-3}"
+      RAWG_API_KEY: "${RAWG_API_KEY:-replace-me}"
+      STEAM_API_KEY: "${STEAM_API_KEY:-replace-me}"
+      IGDB_CLIENT_ID: "${IGDB_CLIENT_ID:-replace-me}"
+      IGDB_CLIENT_SECRET: "${IGDB_CLIENT_SECRET:-replace-me}"
+      WIKIMEDIA_USER_AGENT: "${WIKIMEDIA_USER_AGENT:-game-intelligence-platform/0.1.0 (contact: you@example.com)}"
+      REQUEST_TIMEOUT_SECONDS: "${REQUEST_TIMEOUT_SECONDS:-10}"
+      REQUEST_RETRY_ATTEMPTS: "${REQUEST_RETRY_ATTEMPTS:-3}"
+      RAWG_RATE_LIMIT_PER_MINUTE: "${RAWG_RATE_LIMIT_PER_MINUTE:-60}"
+      WIKIDATA_RATE_LIMIT_PER_MINUTE: "${WIKIDATA_RATE_LIMIT_PER_MINUTE:-60}"
+      STEAM_RATE_LIMIT_PER_MINUTE: "${STEAM_RATE_LIMIT_PER_MINUTE:-30}"
+      WIKIPEDIA_RATE_LIMIT_PER_MINUTE: "${WIKIPEDIA_RATE_LIMIT_PER_MINUTE:-30}"
+      IGDB_RATE_LIMIT_PER_MINUTE: "${IGDB_RATE_LIMIT_PER_MINUTE:-20}"
+      DATA_ROOT: "${DATA_ROOT:-/app/data}"
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - gip-net
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: gip-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: "${APP_NAME:-game-intelligence-platform}"
+      APP_ENV: "${APP_ENV:-local}"
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      DATABASE_URL: "${DATABASE_URL:-postgresql://gip:change-me@postgres:5432/gip}"
+      DATABASE_CONNECT_TIMEOUT: "${DATABASE_CONNECT_TIMEOUT:-3}"
+      RAWG_API_KEY: "${RAWG_API_KEY:-replace-me}"
+      STEAM_API_KEY: "${STEAM_API_KEY:-replace-me}"
+      IGDB_CLIENT_ID: "${IGDB_CLIENT_ID:-replace-me}"
+      IGDB_CLIENT_SECRET: "${IGDB_CLIENT_SECRET:-replace-me}"
+      WIKIMEDIA_USER_AGENT: "${WIKIMEDIA_USER_AGENT:-game-intelligence-platform/0.1.0 (contact: you@example.com)}"
+      REQUEST_TIMEOUT_SECONDS: "${REQUEST_TIMEOUT_SECONDS:-10}"
+      REQUEST_RETRY_ATTEMPTS: "${REQUEST_RETRY_ATTEMPTS:-3}"
+      RAWG_RATE_LIMIT_PER_MINUTE: "${RAWG_RATE_LIMIT_PER_MINUTE:-60}"
+      WIKIDATA_RATE_LIMIT_PER_MINUTE: "${WIKIDATA_RATE_LIMIT_PER_MINUTE:-60}"
+      STEAM_RATE_LIMIT_PER_MINUTE: "${STEAM_RATE_LIMIT_PER_MINUTE:-30}"
+      WIKIPEDIA_RATE_LIMIT_PER_MINUTE: "${WIKIPEDIA_RATE_LIMIT_PER_MINUTE:-30}"
+      IGDB_RATE_LIMIT_PER_MINUTE: "${IGDB_RATE_LIMIT_PER_MINUTE:-20}"
+      DATA_ROOT: "${DATA_ROOT:-/app/data}"
+    command: sleep infinity
+    volumes:
+      - ./:/app
+    networks:
+      - gip-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: gip-minio
+    profiles: ["mlops"]
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minioadmin}"
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - gip-net
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: docker/mlflow/Dockerfile
+    container_name: gip-mlflow
+    profiles: ["mlops"]
+    environment:
+      MLFLOW_TRACKING_URI: "${MLFLOW_TRACKING_URI:-http://mlflow:5000}"
+    command:
+      [
+        "mlflow",
+        "server",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5000",
+        "--backend-store-uri",
+        "sqlite:////app/mlruns/mlflow.db",
+        "--artifacts-destination",
+        "/app/mlruns",
+      ]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/app/mlruns
+    depends_on:
+      - minio
+    networks:
+      - gip-net
+
+  notebook:
+    build:
+      context: .
+      dockerfile: docker/notebook/Dockerfile
+    container_name: gip-notebook
+    profiles: ["notebook"]
+    environment:
+      APP_ENV: "${APP_ENV:-local}"
+      DATA_ROOT: "${DATA_ROOT:-/app/data}"
+    command:
+      [
+        "jupyter",
+        "lab",
+        "--ip=0.0.0.0",
+        "--port=8888",
+        "--no-browser",
+        "--allow-root",
+        "--NotebookApp.token=",
+      ]
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./:/app
+    networks:
+      - gip-net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gip-pgadmin
+    profiles: ["admin"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "${PGADMIN_DEFAULT_EMAIL:-admin@example.com}"
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_DEFAULT_PASSWORD:-change-me}"
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - gip-net
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  gip-net:
+    driver: bridge

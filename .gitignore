@@ -1,0 +1,58 @@
+# Local Codex settings
+.codex/
+.omx/
+Agents.md
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Data and artifacts
+/data/raw/*
+/data/interim/*
+/data/processed/*
+/data/features/*
+/data/artifacts/*
+!/data/raw/.gitkeep
+!/data/interim/.gitkeep
+!/data/processed/.gitkeep
+!/data/features/.gitkeep
+!/data/artifacts/.gitkeep
+/mlruns/
+*.db
+*.sqlite
+
+# Python/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.venv/
+build/
+dist/
+*.egg-info/
+
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+.apdisk
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+*.icloud
+__MACOSX/
+
+# macOS editor swap/cache files
+*.swp
+*.swo

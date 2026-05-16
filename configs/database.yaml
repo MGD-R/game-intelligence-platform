@@ -1,0 +1,12 @@
+database:
+  url_env: DATABASE_URL
+  connect_timeout_seconds: 3
+  schemas:
+    - raw
+    - stg
+    - ml
+    - dm
+    - meta
+  pool:
+    min_size: 1
+    max_size: 5

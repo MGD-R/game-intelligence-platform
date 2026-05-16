@@ -1,0 +1,14 @@
+entity_resolution:
+  blocking_strategy: title_and_year
+  thresholds:
+    auto_merge: 0.95
+    manual_review_min: 0.70
+    no_merge_max: 0.69
+
+recommendations:
+  strategy: content_based_placeholder
+  top_n_default: 10
+
+rag:
+  language: ru
+  grounding: canonical_facts_only

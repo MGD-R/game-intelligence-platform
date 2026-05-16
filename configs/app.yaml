@@ -1,0 +1,13 @@
+app:
+  name: game-intelligence-platform
+  environment: local
+  version: 0.1.0
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  reload: true
+
+health:
+  database_timeout_seconds: 3
+  expose_secrets: false
