@@ -5,7 +5,8 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 .PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
 	db-check test lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
-	wikidata steam wikipedia staging er recommendations rag demo-data all
+	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
+	steam wikipedia staging er recommendations rag demo-data all
 
 build:
 	$(COMPOSE) build app worker
@@ -94,7 +95,24 @@ rawg-staging:
 rawg-demo: rawg-reference rawg-index rawg-staging
 
 wikidata:
-	$(WORKER_RUN) python -m src.ingestion.wikidata_client
+	$(MAKE) wikidata-demo
+
+wikidata-check:
+	$(WORKER_RUN) python -m src.ingestion.wikidata_client --check --dry-run --limit 1
+
+wikidata-identity:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_identity
+
+wikidata-entities:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_entities
+
+wikidata-staging:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.wikidata_to_staging
+
+wikidata-demo: wikidata-identity wikidata-staging
 
 steam:
 	$(WORKER_RUN) python -m src.ingestion.steam_client

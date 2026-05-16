@@ -55,6 +55,8 @@ def resolve_rate_limit(source: str, settings: Mapping[str, object]) -> RateLimit
             return RateLimit(requests=max(1, int(per_minute)), period_seconds=60.0)
 
     configured = settings.get("rate_limit_per_minute")
+    if not configured:
+        configured = settings.get("requests_per_minute")
     if configured:
         return RateLimit(requests=max(1, int(configured)), period_seconds=60.0)
     return None
