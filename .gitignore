@@ -6,6 +6,10 @@ Agents.md
 # Environment and secrets
 .env
 .env.*
+.env.secrets
+.env.secrets.*
+.env.local
+.envrc
 !.env.example
 !.env.secrets.example
 
