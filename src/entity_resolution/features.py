@@ -5,10 +5,16 @@ from __future__ import annotations
 
 def feature_catalog() -> list[str]:
     return [
-        "title_similarity",
+        "name_similarity",
         "alias_similarity",
-        "year_difference",
+        "release_year_diff",
+        "external_id_exact_match",
         "developer_overlap",
-        "platform_overlap",
-        "embedding_cosine_similarity",
+        "publisher_overlap",
+        "platform_jaccard",
+        "genre_jaccard",
+        "tag_jaccard",
+        "description_available_flag",
+        "description_language_match",
+        "source_count_signal",
     ]

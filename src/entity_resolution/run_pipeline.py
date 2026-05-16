@@ -1,16 +1,12 @@
-"""Placeholder CLI for entity resolution pipeline."""
+"""Compatibility wrapper for the baseline entity-resolution pipeline."""
 
 from __future__ import annotations
 
-from src.entity_resolution.blocking import default_blocking_strategy
-from src.entity_resolution.features import feature_catalog
+from src.entity_resolution.run_baseline_pipeline import main as baseline_main
 
 
-def main() -> int:
-    print("Blocking strategy:", default_blocking_strategy())
-    print("Planned features:", ", ".join(feature_catalog()))
-    print("TODO: implement baseline ER rules and logistic regression in a later branch.")
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    return baseline_main(argv)
 
 
 if __name__ == "__main__":
