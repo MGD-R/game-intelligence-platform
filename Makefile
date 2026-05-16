@@ -3,8 +3,8 @@ COMPOSE_DEV := $(COMPOSE) --profile dev
 WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
 .PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
-	db-check test lint format check-sources rawg wikidata steam wikipedia staging er \
-	recommendations rag demo-data all
+	db-check test lint format check-sources check-sources-network cache-list quota-status \
+	rawg wikidata steam wikipedia staging er recommendations rag demo-data all
 
 build:
 	$(COMPOSE) build app worker
@@ -57,7 +57,16 @@ format:
 	$(WORKER_RUN) python -m ruff format src tests
 
 check-sources:
-	$(WORKER_RUN) python -m src.ingestion.check_sources
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.check_sources --no-network
+
+check-sources-network:
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.check_sources --network --limit 1
+
+cache-list:
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.request_cache --list
+
+quota-status:
+	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.quota --status
 
 rawg:
 	$(WORKER_RUN) python -m src.ingestion.rawg_client
