@@ -8,6 +8,8 @@ from collections.abc import Mapping
 from contextlib import contextmanager
 from typing import Any
 
+from psycopg import sql
+
 from src.ingestion.redaction import redact_dsn
 
 
@@ -323,4 +325,103 @@ class IngestionRepository:
                 cursor.execute(
                     query,
                     (source, job_name, checkpoint_key, Jsonb(dict(checkpoint_value or {}))),
+                )
+
+    def insert_raw_record(
+        self,
+        *,
+        table_name: str,
+        endpoint: str,
+        request_hash: str,
+        source_record_id: str | None,
+        response_json: Mapping[str, object] | None,
+        response_hash: str | None,
+        response_storage_path: str | None,
+        from_cache: bool,
+        http_status: int | None,
+        error_message: str | None,
+        request_id: str | None = None,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        schema_name, table = table_name.split(".", maxsplit=1)
+        query = sql.SQL(
+            """
+            INSERT INTO {table} (
+                request_id,
+                endpoint,
+                request_hash,
+                source_record_id,
+                response_json,
+                response_hash,
+                response_storage_path,
+                from_cache,
+                http_status,
+                error_message
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+        ).format(table=sql.Identifier(schema_name, table))
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (
+                        request_id,
+                        endpoint,
+                        request_hash,
+                        source_record_id,
+                        Jsonb(dict(response_json or {})),
+                        response_hash,
+                        response_storage_path,
+                        from_cache,
+                        http_status,
+                        error_message,
+                    ),
+                )
+
+    def fetch_raw_rows(self, table_name: str) -> list[dict[str, Any]]:
+        schema_name, table = table_name.split(".", maxsplit=1)
+        query = sql.SQL(
+            """
+            SELECT *
+            FROM {table}
+            WHERE http_status IS NULL OR http_status < 400
+            ORDER BY loaded_at ASC, id ASC
+            """
+        ).format(table=sql.Identifier(schema_name, table))
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                return list(cursor.fetchall())
+
+    def replace_source_staging_rows(
+        self,
+        *,
+        source: str,
+        table_name: str,
+        rows: list[Mapping[str, object]],
+        key_columns: list[str],
+    ) -> None:
+        schema_name, table = table_name.split(".", maxsplit=1)
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    sql.SQL("DELETE FROM {table} WHERE source = %s").format(
+                        table=sql.Identifier(schema_name, table)
+                    ),
+                    (source,),
+                )
+                if not rows:
+                    return
+
+                columns = list(rows[0].keys())
+                insert_query = sql.SQL("INSERT INTO {table} ({columns}) VALUES ({values})").format(
+                    table=sql.Identifier(schema_name, table),
+                    columns=sql.SQL(", ").join(sql.Identifier(column) for column in columns),
+                    values=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
+                )
+                cursor.executemany(
+                    insert_query,
+                    [tuple(row[column] for column in columns) for row in rows],
                 )
