@@ -35,6 +35,7 @@ Staging normalization and data-quality layer: [docs/staging_data_quality.md](doc
 Steam targeted enrichment: [docs/steam_enrichment.md](docs/steam_enrichment.md).
 Wikipedia summaries enrichment: [docs/wikipedia_summaries.md](docs/wikipedia_summaries.md).
 ML-ready datasets and final data-stage build: [docs/ml_ready_datasets.md](docs/ml_ready_datasets.md).
+Entity Resolution baseline: [docs/entity_resolution_baseline.md](docs/entity_resolution_baseline.md).
 
 ## Quick Start
 
@@ -87,6 +88,13 @@ make manual-review-seed
 make export-ml-ready
 make dataset-manifest
 make ml-ready-data
+make er-dataset
+make er-rule-baseline
+make er-train
+make er-predict
+make er-evaluate
+make er-review-queue
+make er-baseline
 make quota-status
 make rawg
 make wikidata
@@ -104,6 +112,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make entity-data-base` prepares deterministic matches, candidate pairs, feature rows, reports, and parquet exports without calling external APIs.
 `make data-quality` validates staging prerequisites, rebuilds normalized staging rows, writes DQ and anomaly reports, and exports analysis-ready parquet snapshots.
 `make ml-ready-data` finalizes the local data stage: validation, candidate/feature refresh, DQ artifacts, manual review seed, parquet exports, and dataset manifest, again without external API calls.
+`make er-baseline` builds the weak-label training dataset, runs rule and Logistic Regression baselines, predicts matches, evaluates metrics, and prepares a manual review queue without external APIs.
 
 ## API Endpoints
 

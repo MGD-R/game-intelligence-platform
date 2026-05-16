@@ -11,7 +11,8 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
 	validate-staging validate-ml-data manual-review-seed dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
-	staging er recommendations rag demo-data all
+	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-review-queue \
+	er-baseline recommendations rag demo-data all
 
 build:
 	$(COMPOSE) build app worker
@@ -226,7 +227,35 @@ data-stage: validate-ml-data staging match-external-ids candidate-pairs feature-
 data-quality: validate-staging staging dq anomalies export-analysis
 
 er:
-	$(WORKER_RUN) python -m src.entity_resolution.run_pipeline
+	$(MAKE) er-baseline
+
+er-dataset:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_training_dataset
+
+er-rule-baseline:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.rule_baseline
+
+er-train:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.train_baseline_model
+
+er-predict:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.predict_matches
+
+er-evaluate:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.evaluate_model
+
+er-review-queue:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_manual_review_queue
+
+er-baseline:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.run_baseline_pipeline
 
 recommendations:
 	$(WORKER_RUN) python -m src.recommendations.build_recommendations

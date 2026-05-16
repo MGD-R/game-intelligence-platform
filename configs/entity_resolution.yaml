@@ -1,0 +1,47 @@
+entity_resolution:
+  dataset:
+    candidate_pairs_path: data/processed/entity_candidate_pairs.parquet
+    feature_base_path: data/processed/entity_resolution_feature_base.parquet
+    manual_review_seed_path: data/processed/manual_review_seed.parquet
+  labels:
+    positive_sources:
+      - external_id
+      - wikidata_rawg_external_id
+    synthetic_negative:
+      enabled: true
+      max_ratio_to_positive: 3
+      rules:
+        - same_or_similar_name_different_release_year
+        - different_external_ids
+        - low_name_similarity_different_year
+  features:
+    include_embeddings: false
+    numeric:
+      - name_similarity
+      - alias_similarity
+      - release_year_diff
+      - external_id_exact_match
+      - developer_overlap
+      - publisher_overlap
+      - platform_jaccard
+      - genre_jaccard
+      - tag_jaccard
+      - description_available_flag
+      - description_language_match
+      - source_count_signal
+  model:
+    baseline_rule_threshold: 0.95
+    logistic_regression:
+      enabled: true
+      random_state: 42
+      class_weight: balanced
+      max_iter: 1000
+  thresholds:
+    auto_merge: 0.95
+    manual_review_min: 0.70
+    manual_review_max: 0.95
+    no_merge: 0.70
+  outputs:
+    reports_dir: data/artifacts/reports/entity_resolution
+    models_dir: data/artifacts/models/entity_resolution
+    predictions_dir: data/processed/entity_resolution
