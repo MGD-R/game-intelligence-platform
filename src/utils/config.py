@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -43,3 +44,27 @@ def enabled_sources() -> dict[str, list[str]]:
     enabled = [name for name, settings in sources.items() if settings.get("enabled")]
     disabled = [name for name, settings in sources.items() if not settings.get("enabled")]
     return {"enabled": enabled, "disabled": disabled}
+
+
+def source_configuration_status() -> dict[str, list[str]]:
+    sources = load_yaml_config("sources").get("sources", {})
+    configured: list[str] = []
+    missing: list[str] = []
+
+    for source_name, settings in sources.items():
+        required_envs = [
+            env_name
+            for key, env_name in settings.items()
+            if key.endswith("_env") and isinstance(env_name, str)
+        ]
+
+        if not required_envs:
+            configured.append(source_name)
+            continue
+
+        if all(os.getenv(env_name) for env_name in required_envs):
+            configured.append(source_name)
+        else:
+            missing.append(source_name)
+
+    return {"configured": configured, "missing": missing}
