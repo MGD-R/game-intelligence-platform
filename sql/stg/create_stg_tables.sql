@@ -19,6 +19,12 @@ CREATE TABLE IF NOT EXISTS stg.source_games (
     PRIMARY KEY (source, source_game_id)
 );
 
+CREATE INDEX IF NOT EXISTS ix_source_games_name_normalized
+    ON stg.source_games (source, name_normalized);
+
+CREATE INDEX IF NOT EXISTS ix_source_games_release_year
+    ON stg.source_games (source, release_year);
+
 CREATE TABLE IF NOT EXISTS stg.source_game_aliases (
     id BIGSERIAL PRIMARY KEY,
     source TEXT NOT NULL,
@@ -33,6 +39,9 @@ CREATE TABLE IF NOT EXISTS stg.source_game_aliases (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_source_game_aliases_value
     ON stg.source_game_aliases (source, source_game_id, alias, COALESCE(language, ''), COALESCE(alias_type, ''));
 
+CREATE INDEX IF NOT EXISTS ix_source_game_aliases_source_game
+    ON stg.source_game_aliases (source, source_game_id);
+
 CREATE TABLE IF NOT EXISTS stg.source_game_external_ids (
     id BIGSERIAL PRIMARY KEY,
     source TEXT NOT NULL,
@@ -46,6 +55,9 @@ CREATE TABLE IF NOT EXISTS stg.source_game_external_ids (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_source_game_external_ids_value
     ON stg.source_game_external_ids (source, source_game_id, external_source, external_id);
+
+CREATE INDEX IF NOT EXISTS ix_source_game_external_ids_lookup
+    ON stg.source_game_external_ids (source, external_source, external_id);
 
 CREATE TABLE IF NOT EXISTS stg.source_game_genres (
     id BIGSERIAL PRIMARY KEY,

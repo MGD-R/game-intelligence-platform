@@ -31,6 +31,7 @@ Ingestion framework notes: [docs/ingestion_framework.md](docs/ingestion_framewor
 RAWG ingestion flow: [docs/rawg_ingestion.md](docs/rawg_ingestion.md).
 Wikidata identity ingestion: [docs/wikidata_ingestion.md](docs/wikidata_ingestion.md).
 External ID matching and candidate corpus: [docs/external_id_matching.md](docs/external_id_matching.md).
+Staging normalization and data-quality layer: [docs/staging_data_quality.md](docs/staging_data_quality.md).
 
 ## Quick Start
 
@@ -68,6 +69,10 @@ make candidate-pairs
 make feature-base
 make source-coverage
 make export-ml-base
+make validate-staging
+make dq
+make anomalies
+make export-analysis
 make quota-status
 make rawg
 make wikidata
@@ -81,6 +86,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
 `make wikidata` runs the safe demo pipeline (`wikidata-identity`, `wikidata-staging`) and does not request EntityData by default.
 `make entity-data-base` prepares deterministic matches, candidate pairs, feature rows, reports, and parquet exports without calling external APIs.
+`make data-quality` validates staging prerequisites, rebuilds normalized staging rows, writes DQ and anomaly reports, and exports analysis-ready parquet snapshots.
 
 ## API Endpoints
 

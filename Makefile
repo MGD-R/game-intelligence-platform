@@ -7,6 +7,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
+	validate-staging dq anomalies export-analysis data-quality \
 	steam wikipedia staging er recommendations rag demo-data all
 
 build:
@@ -143,8 +144,27 @@ steam:
 wikipedia:
 	$(WORKER_RUN) python -m src.ingestion.wikipedia_client
 
+validate-staging:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.validate_staging_state
+
 staging:
-	$(WORKER_RUN) python -m src.preprocessing.build_staging
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.build_staging --all
+
+dq:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.data_quality
+
+anomalies:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.anomaly_reports
+
+export-analysis:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_analysis_data
+
+data-quality: validate-staging staging dq anomalies export-analysis
 
 er:
 	$(WORKER_RUN) python -m src.entity_resolution.run_pipeline
