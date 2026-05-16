@@ -28,9 +28,17 @@ sql/        future SQL transformations by layer
 
 ```bash
 cp .env.example .env
+cp .env.secrets.example .env.secrets
 make build
 make up
 curl http://localhost:8000/health
+```
+
+For live reload development use:
+
+```bash
+make build-dev
+make up-dev
 ```
 
 ## Main Commands
@@ -46,6 +54,8 @@ make er
 make recommendations
 make rag
 ```
+
+These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
 
 ## API Endpoints
 
@@ -63,7 +73,8 @@ make rag
 
 ## Docker Profiles
 
-- `make up` starts the MVP stack.
+- `make up` starts the runtime-like MVP stack without source bind mounts or reload.
+- `make up-dev` starts the local development stack with bind mounts and autoreload.
 - `make up-mlops` adds `mlflow` and `minio`.
 - `make up-notebook` adds `notebook`.
 - `make up-admin` adds `pgadmin`.
@@ -71,6 +82,8 @@ make rag
 ## Security Notes
 
 - Keep `.env`, `.codex/`, `.omx/`, data directories, and generated artifacts out of Git.
+- Store real external API tokens in `.env.secrets`; keep `.env` for non-secret local defaults.
+- Commit only examples such as `.env.example` and `.env.secrets.example`.
 - Replace all placeholder credentials before using external APIs.
 - Health endpoints return status information only and do not expose secrets.
 

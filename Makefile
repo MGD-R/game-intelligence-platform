@@ -1,14 +1,22 @@
 COMPOSE := docker compose
-PYTHON := python3
+COMPOSE_DEV := $(COMPOSE) --profile dev
+WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
-.PHONY: build up up-mlops up-notebook up-admin down logs ps shell test lint format \
-	check-sources rawg wikidata steam wikipedia staging er recommendations rag demo-data all
+.PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell test \
+	lint format check-sources rawg wikidata steam wikipedia staging er recommendations rag \
+	demo-data all
 
 build:
-	$(COMPOSE) build
+	$(COMPOSE) build app worker
+
+build-dev:
+	$(COMPOSE_DEV) build app-dev worker-dev
 
 up:
 	$(COMPOSE) up -d postgres app worker
+
+up-dev:
+	$(COMPOSE_DEV) up -d postgres app-dev worker-dev
 
 up-mlops:
 	$(COMPOSE) --profile mlops up -d postgres app worker minio mlflow
@@ -20,55 +28,55 @@ up-admin:
 	$(COMPOSE) --profile admin up -d postgres app worker pgadmin
 
 down:
-	$(COMPOSE) down --remove-orphans
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin down --remove-orphans
 
 logs:
-	$(COMPOSE) logs -f --tail=100
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin logs -f --tail=100
 
 ps:
-	$(COMPOSE) ps
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin ps
 
 shell:
-	$(COMPOSE) exec worker /bin/sh
+	$(COMPOSE_DEV) run --rm worker-dev /bin/sh
 
 test:
-	$(PYTHON) -m pytest
+	$(WORKER_RUN) python -m pytest
 
 lint:
-	$(PYTHON) -m ruff check src tests
+	$(WORKER_RUN) python -m ruff check src tests
 
 format:
-	$(PYTHON) -m ruff format src tests
+	$(WORKER_RUN) python -m ruff format src tests
 
 check-sources:
-	$(PYTHON) -m src.ingestion.check_sources
+	$(WORKER_RUN) python -m src.ingestion.check_sources
 
 rawg:
-	$(PYTHON) -m src.ingestion.rawg_client
+	$(WORKER_RUN) python -m src.ingestion.rawg_client
 
 wikidata:
-	$(PYTHON) -m src.ingestion.wikidata_client
+	$(WORKER_RUN) python -m src.ingestion.wikidata_client
 
 steam:
-	$(PYTHON) -m src.ingestion.steam_client
+	$(WORKER_RUN) python -m src.ingestion.steam_client
 
 wikipedia:
-	$(PYTHON) -m src.ingestion.wikipedia_client
+	$(WORKER_RUN) python -m src.ingestion.wikipedia_client
 
 staging:
-	$(PYTHON) -m src.preprocessing.build_staging
+	$(WORKER_RUN) python -m src.preprocessing.build_staging
 
 er:
-	$(PYTHON) -m src.entity_resolution.run_pipeline
+	$(WORKER_RUN) python -m src.entity_resolution.run_pipeline
 
 recommendations:
-	$(PYTHON) -m src.recommendations.build_recommendations
+	$(WORKER_RUN) python -m src.recommendations.build_recommendations
 
 rag:
-	$(PYTHON) -m src.rag.build_index
+	$(WORKER_RUN) python -m src.rag.build_index
 
 demo-data:
-	$(PYTHON) -m src.preprocessing.build_staging --demo
+	$(WORKER_RUN) python -m src.preprocessing.build_staging --demo
 
 all:
 	$(MAKE) check-sources

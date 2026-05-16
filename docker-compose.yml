@@ -1,5 +1,19 @@
 name: game-intelligence-platform
 
+x-app-env-files: &app-env-files
+  - path: .env
+    required: false
+  - path: .env.secrets
+    required: false
+
+x-app-service: &app-service
+  depends_on:
+    postgres:
+      condition: service_healthy
+  env_file: *app-env-files
+  networks:
+    - gip-net
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -23,35 +37,45 @@ services:
       - gip-net
 
   app:
+    <<: *app-service
     build:
       context: .
       dockerfile: docker/app/Dockerfile
+      target: runtime
     container_name: gip-app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      APP_NAME: "${APP_NAME:-game-intelligence-platform}"
-      APP_ENV: "${APP_ENV:-local}"
-      APP_VERSION: "${APP_VERSION:-0.1.0}"
-      APP_HOST: "${APP_HOST:-0.0.0.0}"
-      APP_PORT: "${APP_PORT:-8000}"
-      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
-      DATABASE_URL: "${DATABASE_URL:-postgresql://gip:change-me@postgres:5432/gip}"
-      DATABASE_CONNECT_TIMEOUT: "${DATABASE_CONNECT_TIMEOUT:-3}"
-      RAWG_API_KEY: "${RAWG_API_KEY:-replace-me}"
-      STEAM_API_KEY: "${STEAM_API_KEY:-replace-me}"
-      IGDB_CLIENT_ID: "${IGDB_CLIENT_ID:-replace-me}"
-      IGDB_CLIENT_SECRET: "${IGDB_CLIENT_SECRET:-replace-me}"
-      WIKIMEDIA_USER_AGENT: "${WIKIMEDIA_USER_AGENT:-game-intelligence-platform/0.1.0 (contact: you@example.com)}"
-      REQUEST_TIMEOUT_SECONDS: "${REQUEST_TIMEOUT_SECONDS:-10}"
-      REQUEST_RETRY_ATTEMPTS: "${REQUEST_RETRY_ATTEMPTS:-3}"
-      RAWG_RATE_LIMIT_PER_MINUTE: "${RAWG_RATE_LIMIT_PER_MINUTE:-60}"
-      WIKIDATA_RATE_LIMIT_PER_MINUTE: "${WIKIDATA_RATE_LIMIT_PER_MINUTE:-60}"
-      STEAM_RATE_LIMIT_PER_MINUTE: "${STEAM_RATE_LIMIT_PER_MINUTE:-30}"
-      WIKIPEDIA_RATE_LIMIT_PER_MINUTE: "${WIKIPEDIA_RATE_LIMIT_PER_MINUTE:-30}"
-      IGDB_RATE_LIMIT_PER_MINUTE: "${IGDB_RATE_LIMIT_PER_MINUTE:-20}"
-      DATA_ROOT: "${DATA_ROOT:-/app/data}"
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  worker:
+    <<: *app-service
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: runtime
+    container_name: gip-worker
+    command: sleep infinity
+    
+  app-dev:
+    <<: *app-service
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: dev
+    container_name: gip-app-dev
     command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
@@ -69,42 +93,18 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-    networks:
-      - gip-net
 
-  worker:
+  worker-dev:
+    <<: *app-service
+    profiles: ["dev"]
     build:
       context: .
       dockerfile: docker/app/Dockerfile
-    container_name: gip-worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      APP_NAME: "${APP_NAME:-game-intelligence-platform}"
-      APP_ENV: "${APP_ENV:-local}"
-      APP_VERSION: "${APP_VERSION:-0.1.0}"
-      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
-      DATABASE_URL: "${DATABASE_URL:-postgresql://gip:change-me@postgres:5432/gip}"
-      DATABASE_CONNECT_TIMEOUT: "${DATABASE_CONNECT_TIMEOUT:-3}"
-      RAWG_API_KEY: "${RAWG_API_KEY:-replace-me}"
-      STEAM_API_KEY: "${STEAM_API_KEY:-replace-me}"
-      IGDB_CLIENT_ID: "${IGDB_CLIENT_ID:-replace-me}"
-      IGDB_CLIENT_SECRET: "${IGDB_CLIENT_SECRET:-replace-me}"
-      WIKIMEDIA_USER_AGENT: "${WIKIMEDIA_USER_AGENT:-game-intelligence-platform/0.1.0 (contact: you@example.com)}"
-      REQUEST_TIMEOUT_SECONDS: "${REQUEST_TIMEOUT_SECONDS:-10}"
-      REQUEST_RETRY_ATTEMPTS: "${REQUEST_RETRY_ATTEMPTS:-3}"
-      RAWG_RATE_LIMIT_PER_MINUTE: "${RAWG_RATE_LIMIT_PER_MINUTE:-60}"
-      WIKIDATA_RATE_LIMIT_PER_MINUTE: "${WIKIDATA_RATE_LIMIT_PER_MINUTE:-60}"
-      STEAM_RATE_LIMIT_PER_MINUTE: "${STEAM_RATE_LIMIT_PER_MINUTE:-30}"
-      WIKIPEDIA_RATE_LIMIT_PER_MINUTE: "${WIKIPEDIA_RATE_LIMIT_PER_MINUTE:-30}"
-      IGDB_RATE_LIMIT_PER_MINUTE: "${IGDB_RATE_LIMIT_PER_MINUTE:-20}"
-      DATA_ROOT: "${DATA_ROOT:-/app/data}"
+      target: dev
+    container_name: gip-worker-dev
     command: sleep infinity
     volumes:
       - ./:/app
-    networks:
-      - gip-net
 
   minio:
     image: minio/minio:latest
@@ -128,6 +128,7 @@ services:
       dockerfile: docker/mlflow/Dockerfile
     container_name: gip-mlflow
     profiles: ["mlops"]
+    env_file: *app-env-files
     environment:
       MLFLOW_TRACKING_URI: "${MLFLOW_TRACKING_URI:-http://mlflow:5000}"
     command:
@@ -158,6 +159,7 @@ services:
       dockerfile: docker/notebook/Dockerfile
     container_name: gip-notebook
     profiles: ["notebook"]
+    env_file: *app-env-files
     environment:
       APP_ENV: "${APP_ENV:-local}"
       DATA_ROOT: "${DATA_ROOT:-/app/data}"
