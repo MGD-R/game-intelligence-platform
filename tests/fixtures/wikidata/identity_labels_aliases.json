@@ -1,0 +1,52 @@
+{
+  "head": {
+    "vars": [
+      "game",
+      "qid",
+      "labelRu",
+      "labelEn",
+      "aliasRu",
+      "aliasEn",
+      "releaseDate"
+    ]
+  },
+  "results": {
+    "bindings": [
+      {
+        "game": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q12345"
+        },
+        "qid": {
+          "type": "literal",
+          "value": "Q12345"
+        },
+        "labelRu": {
+          "xml:lang": "ru",
+          "type": "literal",
+          "value": "Игра Пример"
+        },
+        "labelEn": {
+          "xml:lang": "en",
+          "type": "literal",
+          "value": "Sample Game"
+        },
+        "aliasRu": {
+          "xml:lang": "ru",
+          "type": "literal",
+          "value": "Пример Игра"
+        },
+        "aliasEn": {
+          "xml:lang": "en",
+          "type": "literal",
+          "value": "Game Example"
+        },
+        "releaseDate": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "type": "literal",
+          "value": "2013-09-17T00:00:00Z"
+        }
+      }
+    ]
+  }
+}

@@ -29,6 +29,7 @@ Docker/PostgreSQL bootstrap commands: [docs/docker_db_bootstrap.md](docs/docker_
 Database storage design: [docs/database_schema.md](docs/database_schema.md).
 Ingestion framework notes: [docs/ingestion_framework.md](docs/ingestion_framework.md).
 RAWG ingestion flow: [docs/rawg_ingestion.md](docs/rawg_ingestion.md).
+Wikidata identity ingestion: [docs/wikidata_ingestion.md](docs/wikidata_ingestion.md).
 
 ## Quick Start
 
@@ -58,6 +59,9 @@ make rawg-check
 make rawg-reference
 make rawg-index
 make rawg-staging
+make wikidata-check
+make wikidata-identity
+make wikidata-staging
 make quota-status
 make rawg
 make wikidata
@@ -69,6 +73,7 @@ make rag
 
 These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
 `make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
+`make wikidata` runs the safe demo pipeline (`wikidata-identity`, `wikidata-staging`) and does not request EntityData by default.
 
 ## API Endpoints
 

@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Q12345": {
+      "type": "item",
+      "id": "Q12345",
+      "labels": {
+        "ru": {
+          "language": "ru",
+          "value": "Игра Пример"
+        },
+        "en": {
+          "language": "en",
+          "value": "Sample Game"
+        }
+      },
+      "aliases": {
+        "ru": [
+          {
+            "language": "ru",
+            "value": "Игра Образец"
+          }
+        ],
+        "en": [
+          {
+            "language": "en",
+            "value": "Example Game"
+          }
+        ]
+      },
+      "sitelinks": {
+        "ruwiki": {
+          "site": "ruwiki",
+          "title": "Игра Пример"
+        },
+        "enwiki": {
+          "site": "enwiki",
+          "title": "Sample Game"
+        }
+      },
+      "claims": {
+        "P9968": [
+          {
+            "mainsnak": {
+              "datavalue": {
+                "value": "3498"
+              }
+            }
+          }
+        ],
+        "P1733": [
+          {
+            "mainsnak": {
+              "datavalue": {
+                "value": "271590"
+              }
+            }
+          }
+        ],
+        "P9043": [
+          {
+            "mainsnak": {
+              "datavalue": {
+                "value": "1020"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

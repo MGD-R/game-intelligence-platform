@@ -1,0 +1,62 @@
+{
+  "head": {
+    "vars": [
+      "game",
+      "qid",
+      "label",
+      "rawg",
+      "steam",
+      "igdb",
+      "articleRu",
+      "articleEn",
+      "releaseDate"
+    ]
+  },
+  "results": {
+    "bindings": [
+      {
+        "game": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q12345"
+        },
+        "qid": {
+          "type": "literal",
+          "value": "Q12345"
+        },
+        "label": {
+          "xml:lang": "en",
+          "type": "literal",
+          "value": "Sample Game"
+        },
+        "rawg": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+          "type": "literal",
+          "value": "3498"
+        },
+        "steam": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+          "type": "literal",
+          "value": "271590"
+        },
+        "igdb": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+          "type": "literal",
+          "value": "1020"
+        },
+        "articleRu": {
+          "type": "uri",
+          "value": "https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B8%D0%BC%D0%B5%D1%80"
+        },
+        "articleEn": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/Sample_Game"
+        },
+        "releaseDate": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "type": "literal",
+          "value": "2013-09-17T00:00:00Z"
+        }
+      }
+    ]
+  }
+}

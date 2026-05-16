@@ -16,10 +16,15 @@ sources:
   wikidata:
     enabled: true
     tier: mvp
-    base_url: https://www.wikidata.org/w/api.php
+    base_url: https://query.wikidata.org
+    sparql_url: https://query.wikidata.org/sparql
+    entity_data_url: https://www.wikidata.org/wiki/Special:EntityData/{qid}.json
     user_agent_env: WIKIMEDIA_USER_AGENT
+    requests_per_minute: 30
+    cache_enabled: true
+    strategy: bulk_sparql_identity_hub
+    demo_limit: 5000
     timeout_seconds: 10
-    rate_limit_per_minute: 60
   steam:
     enabled: false
     tier: optional
