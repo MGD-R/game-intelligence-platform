@@ -2,22 +2,21 @@
 
 This roadmap defines the safe execution order for the first data-stage implementation work.
 
-1. Docker and PostgreSQL bootstrap stabilization.
-2. Data storage schema confirmation for `raw`, `stg`, `ml`, `dm`, `meta`.
-3. Ingestion framework with request cache, quota tracking, and retries.
-4. RAWG ingestion implementation with low-volume validation.
-5. Wikidata ingestion implementation with low-volume validation.
-6. External ID matching between source records.
-7. Staging normalization and data quality checks.
-8. Optional Steam enrichment through targeted external IDs only.
-9. Optional Wikipedia summaries through grounded sitelinks.
-10. Optional IGDB enrichment after MVP ingestion is stable.
-11. ML-ready dataset export for downstream entity resolution and recommendation work.
+1. Stage 1: project hygiene and environment fixation.
+2. Stage 2: Docker and PostgreSQL bootstrap.
+3. Stage 3: raw/meta/staging database schema.
+4. Stage 4: common ingestion framework with request cache, `request_hash`, rate limits, retries, and quota control.
+5. Stage 5: RAWG ingestion with reference endpoints, games index, and targeted details only after data quality checks.
+6. Stage 6: Wikidata ingestion through SPARQL as an identity hub with ru/en labels, aliases, external IDs, and Wikipedia sitelinks.
+7. Stage 7: deterministic external-ID matching and candidate corpus creation.
+8. Stage 8: staging normalization and data quality reports.
+9. Stage 9: optional Steam targeted enrichment by Steam AppID.
+10. Stage 10: optional Wikipedia summaries by Wikidata sitelinks.
+11. Stage 11: optional IGDB batch enrichment by Wikidata IGDB IDs.
+12. Stage 12: ML-ready dataset export to PostgreSQL tables and Parquet snapshots.
 
-Current non-goals for this stage:
+Current data-stage goal:
 
-- mass API loading;
-- model training;
-- embedding generation;
-- RAG execution;
-- Airflow adoption.
+- stop before ML training;
+- prepare stable datasets for analysis, feature engineering, and future entity resolution;
+- avoid mass API loading until cache, retry, and quota controls are implemented.
