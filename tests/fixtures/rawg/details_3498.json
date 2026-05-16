@@ -1,0 +1,60 @@
+{
+  "id": 3498,
+  "slug": "grand-theft-auto-v",
+  "name": "Grand Theft Auto V",
+  "released": "2013-09-17",
+  "description_raw": "Open-world action adventure game.",
+  "website": "https://www.rockstargames.com/gta-v",
+  "reddit_url": "https://reddit.com/r/GTAV",
+  "metacritic": 92,
+  "playtime": 74,
+  "developers": [
+    {
+      "id": 1,
+      "name": "Rockstar North"
+    }
+  ],
+  "publishers": [
+    {
+      "id": 2,
+      "name": "Rockstar Games"
+    }
+  ],
+  "genres": [
+    {
+      "id": 4,
+      "name": "Action"
+    },
+    {
+      "id": 3,
+      "name": "Adventure"
+    }
+  ],
+  "tags": [
+    {
+      "id": 31,
+      "name": "Singleplayer"
+    },
+    {
+      "id": 7,
+      "name": "Multiplayer"
+    }
+  ],
+  "platforms": [
+    {
+      "platform": {
+        "id": 4,
+        "name": "PC"
+      }
+    },
+    {
+      "platform": {
+        "id": 187,
+        "name": "PlayStation 5"
+      }
+    }
+  ],
+  "rating": 4.47,
+  "rating_top": 5,
+  "ratings_count": 6890
+}
