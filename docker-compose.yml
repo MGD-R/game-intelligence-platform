@@ -14,6 +14,14 @@ x-app-service: &app-service
   networks:
     - gip-net
 
+x-dev-volumes: &dev-volumes
+  - ./src:/app/src
+  - ./configs:/app/configs
+  - ./data:/app/data
+  - ./tests:/app/tests
+  - ./pyproject.toml:/app/pyproject.toml:ro
+  - ./README.md:/app/README.md:ro
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -79,8 +87,7 @@ services:
     command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
-    volumes:
-      - ./:/app
+    volumes: *dev-volumes
     healthcheck:
       test:
         [
@@ -103,8 +110,7 @@ services:
       target: dev
     container_name: gip-worker-dev
     command: sleep infinity
-    volumes:
-      - ./:/app
+    volumes: *dev-volumes
 
   minio:
     image: minio/minio:latest

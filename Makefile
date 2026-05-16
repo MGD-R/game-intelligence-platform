@@ -2,9 +2,9 @@ COMPOSE := docker compose
 COMPOSE_DEV := $(COMPOSE) --profile dev
 WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
-.PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell test \
-	lint format check-sources rawg wikidata steam wikipedia staging er recommendations rag \
-	demo-data all
+.PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
+	db-check test lint format check-sources rawg wikidata steam wikipedia staging er \
+	recommendations rag demo-data all
 
 build:
 	$(COMPOSE) build app worker
@@ -38,6 +38,14 @@ ps:
 
 shell:
 	$(COMPOSE_DEV) run --rm worker-dev /bin/sh
+
+db-shell:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) exec postgres sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+
+db-check:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) exec -T postgres sh -lc 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('\''raw'\'','\''stg'\'','\''ml'\'','\''dm'\'','\''meta'\'') ORDER BY schema_name;"'
 
 test:
 	$(WORKER_RUN) python -m pytest
