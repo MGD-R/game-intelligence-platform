@@ -6,6 +6,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	db-check test lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
+	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
 	steam wikipedia staging er recommendations rag demo-data all
 
 build:
@@ -113,6 +114,28 @@ wikidata-staging:
 	$(WORKER_RUN) python -m src.preprocessing.wikidata_to_staging
 
 wikidata-demo: wikidata-identity wikidata-staging
+
+match-external-ids:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.match_external_ids
+
+candidate-pairs:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_candidate_pairs
+
+feature-base:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_feature_base
+
+source-coverage:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.source_coverage
+
+export-ml-base:
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_ml_ready_base
+
+entity-data-base: match-external-ids candidate-pairs feature-base source-coverage export-ml-base
 
 steam:
 	$(WORKER_RUN) python -m src.ingestion.steam_client

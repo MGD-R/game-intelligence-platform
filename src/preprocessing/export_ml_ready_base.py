@@ -1,0 +1,69 @@
+"""Export ML-ready candidate corpus snapshots to parquet files."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+import polars as pl
+
+from src.ingestion.repository import IngestionRepository
+from src.preprocessing.validate_data_stage_inputs import ensure_stage_inputs
+from src.utils.config import project_root
+
+
+def write_parquet(path: Path, rows: list[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frame = pl.DataFrame(rows or [{"status": "empty"}])
+    frame.write_parquet(path)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Export ML-ready snapshots to parquet.")
+    parser.add_argument("--output-dir", default=str(project_root() / "data" / "processed"))
+    parser.add_argument("--limit", type=int, help="Optional row limit per exported dataset.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview export paths without DB reads or writes.",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    output_dir = Path(args.output_dir)
+    outputs = {
+        "entity_candidate_pairs": output_dir / "entity_candidate_pairs.parquet",
+        "entity_resolution_feature_base": output_dir / "entity_resolution_feature_base.parquet",
+        "source_external_ids": output_dir / "source_external_ids.parquet",
+        "source_aliases": output_dir / "source_aliases.parquet",
+    }
+    if args.dry_run:
+        print({key: str(path) for key, path in outputs.items()})
+        return 0
+
+    repository = IngestionRepository()
+    ensure_stage_inputs(repository)
+    write_parquet(
+        outputs["entity_candidate_pairs"],
+        repository.fetch_candidate_pairs(limit=args.limit),
+    )
+    write_parquet(
+        outputs["entity_resolution_feature_base"],
+        repository.fetch_entity_resolution_features(limit=args.limit),
+    )
+    write_parquet(
+        outputs["source_external_ids"],
+        repository.fetch_staging_rows("stg.source_game_external_ids", limit=args.limit),
+    )
+    write_parquet(
+        outputs["source_aliases"],
+        repository.fetch_staging_rows("stg.source_game_aliases", limit=args.limit),
+    )
+    print({key: str(path) for key, path in outputs.items()})
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
