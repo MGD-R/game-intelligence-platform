@@ -9,7 +9,7 @@ from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.utils.config import enabled_sources, load_yaml_config
+from src.utils.config import enabled_sources, load_yaml_config, source_configuration_status
 from src.utils.logging import configure_logging
 
 LOGGER = configure_logging()
@@ -42,10 +42,13 @@ def create_app() -> FastAPI:
     @app.get("/health/sources")
     def health_sources() -> dict[str, Any]:
         sources = enabled_sources()
+        config_status = source_configuration_status()
         return {
             "status": "ok",
             "enabled": sources["enabled"],
             "disabled": sources["disabled"],
+            "configured": config_status["configured"],
+            "missing_configuration": config_status["missing"],
         }
 
     @app.get("/version")
