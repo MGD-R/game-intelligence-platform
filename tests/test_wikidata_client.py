@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import httpx
 import pytest
 
+from src.ingestion import base_client
 from src.ingestion.wikidata_client import WikidataClient
 from src.ingestion.wikidata_queries import build_query
 
@@ -38,3 +40,27 @@ def test_entity_data_requires_user_agent_outside_dry_run(monkeypatch: pytest.Mon
 
     with pytest.raises(RuntimeError, match="Missing required Wikimedia user agent env"):
         client.get_entity_data("Q12345")
+
+
+def test_wikidata_http_error_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeHTTPClient:
+        def __enter__(self) -> "FakeHTTPClient":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def request(self, *_args, **_kwargs) -> httpx.Response:
+            request = httpx.Request("GET", "https://query.wikidata.org/sparql")
+            return httpx.Response(502, request=request, json={"error": "bad gateway"})
+
+    monkeypatch.setenv("WIKIMEDIA_USER_AGENT", "game-intelligence-platform/0.1 (me@example.com)")
+    monkeypatch.setattr(base_client.httpx, "Client", lambda **_: FakeHTTPClient())
+    client = WikidataClient(repository=None)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        client.run_sparql(
+            build_query("external_ids_sitelinks", limit=1),
+            query_name="external_ids_sitelinks",
+            force_refresh=True,
+        )

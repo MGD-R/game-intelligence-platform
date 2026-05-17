@@ -32,8 +32,32 @@ class _ExportRepoStub:
         return {
             "raw.rawg_game_index": 1,
             "raw.rawg_game_details": 1,
+            "raw.rawg_reference_data": 1,
+            "raw.wikidata_sparql_results": 1,
             "raw.wikidata_entities": 1,
+            "stg.source_games": 2 if source == "rawg" else (1 if source == "wikidata" else 3),
+            "stg.source_game_external_ids": 1,
+            "ml.entity_candidate_pairs": 1,
+            "ml.entity_resolution_features": 1,
         }.get(table_name, 0)
+
+    def fetch_staging_rows(
+        self,
+        table_name: str,
+        *,
+        source: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, object]]:
+        if table_name == "stg.source_game_external_ids" and source == "wikidata":
+            return [
+                {
+                    "source": "wikidata",
+                    "source_game_id": "Q1",
+                    "external_source": "rawg",
+                    "external_id": "1",
+                }
+            ]
+        return []
 
 
 def test_export_data_pack_writes_jsonl_and_checksums(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]

@@ -24,7 +24,7 @@ sources:
     cache_enabled: true
     strategy: bulk_sparql_identity_hub
     demo_limit: 5000
-    timeout_seconds: 10
+    timeout_seconds: 90
   steam:
     enabled: true
     tier: optional

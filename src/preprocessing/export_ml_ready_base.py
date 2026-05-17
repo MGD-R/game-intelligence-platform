@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import polars as pl
 
@@ -19,6 +20,22 @@ def _normalize_value(value: Any) -> Any:
         return json.dumps(value, sort_keys=True, ensure_ascii=True)
     if isinstance(value, list):
         return json.dumps(value, sort_keys=False, ensure_ascii=True)
+    if isinstance(value, UUID):
+        return str(value)
+    return value
+
+
+def _coerce_schema_value(value: Any, dtype: pl.DataType) -> Any:
+    if value is None:
+        return None
+    if dtype == pl.Utf8:
+        return str(value)
+    if dtype == pl.Int64:
+        return int(value)
+    if dtype == pl.Float64:
+        return float(value)
+    if dtype == pl.Boolean:
+        return bool(value)
     return value
 
 
@@ -30,9 +47,15 @@ def write_parquet(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if rows:
-        normalized_rows = [
-            {key: _normalize_value(value) for key, value in row.items()} for row in rows
-        ]
+        normalized_rows = []
+        for row in rows:
+            normalized_row = {key: _normalize_value(value) for key, value in row.items()}
+            if schema:
+                normalized_row = {
+                    key: _coerce_schema_value(normalized_row.get(key), dtype)
+                    for key, dtype in schema.items()
+                }
+            normalized_rows.append(normalized_row)
         frame = pl.DataFrame(normalized_rows, schema=schema)
     elif schema:
         frame = pl.DataFrame(schema=schema)

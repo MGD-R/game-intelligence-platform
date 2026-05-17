@@ -101,6 +101,23 @@ class IngestionRepository:
                 from_cache
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (source, request_hash)
+            WHERE request_hash IS NOT NULL
+            DO UPDATE
+            SET endpoint = EXCLUDED.endpoint,
+                request_method = EXCLUDED.request_method,
+                request_url = EXCLUDED.request_url,
+                request_params_json = EXCLUDED.request_params_json,
+                request_body = EXCLUDED.request_body,
+                from_cache = EXCLUDED.from_cache,
+                http_status = NULL,
+                response_hash = NULL,
+                response_storage_path = NULL,
+                finished_at = NULL,
+                duration_ms = NULL,
+                error_message = NULL,
+                started_at = NOW(),
+                updated_at = NOW()
             RETURNING request_id
         """
         with self.connection() as connection:
@@ -842,7 +859,10 @@ class IngestionRepository:
         rows: list[Mapping[str, object]],
         key_columns: list[str],
     ) -> None:
+        from psycopg.types.json import Jsonb
+
         schema_name, table = table_name.split(".", maxsplit=1)
+        json_columns = self.fetch_jsonb_columns(table_name)
         with self.connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -860,7 +880,33 @@ class IngestionRepository:
                     columns=sql.SQL(", ").join(sql.Identifier(column) for column in columns),
                     values=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
                 )
+
+                def adapt_value(column: str, value: object) -> object:
+                    if column in json_columns:
+                        if isinstance(value, Mapping):
+                            return Jsonb(dict(value))
+                        if isinstance(value, list):
+                            return Jsonb(value)
+                    return value
+
                 cursor.executemany(
                     insert_query,
-                    [tuple(row[column] for column in columns) for row in rows],
+                    [
+                        tuple(adapt_value(column, row[column]) for column in columns)
+                        for row in rows
+                    ],
                 )
+
+    def fetch_jsonb_columns(self, table_name: str) -> set[str]:
+        schema_name, table = table_name.split(".", maxsplit=1)
+        query = """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = %s
+              AND table_name = %s
+              AND udt_name IN ('json', 'jsonb')
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, (schema_name, table))
+                return {str(row["column_name"]) for row in cursor.fetchall()}

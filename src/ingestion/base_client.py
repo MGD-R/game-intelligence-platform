@@ -140,28 +140,41 @@ class BaseAPIClient:
 
         if use_cache and not force_refresh and self.cache.exists(self.source, request_hash):
             cached_entry = self.cache.read(self.source, request_hash)
-            self._safe_record_cache_hit(
-                endpoint=endpoint,
-                request_hash=request_hash,
-                request_url=request_url,
-                request_params=request_params,
-                request_body=request_body,
-                cached_entry=cached_entry,
-                method=method,
+            cached_status = self._cache_http_status(cached_entry)
+            if cached_status is None or cached_status < 400:
+                self._safe_record_cache_hit(
+                    endpoint=endpoint,
+                    request_hash=request_hash,
+                    request_url=request_url,
+                    request_params=request_params,
+                    request_body=request_body,
+                    cached_entry=cached_entry,
+                    method=method,
+                )
+                return IngestionResponse(
+                    source=self.source,
+                    endpoint=endpoint,
+                    request_hash=request_hash,
+                    request_url=request_url,
+                    http_status=cached_entry.get("http_status"),
+                    payload=cached_entry.get("response_json", cached_entry.get("response_text")),
+                    response_hash=cached_entry.get("response_hash"),
+                    from_cache=True,
+                    dry_run=False,
+                    cache_path=str(self.cache.cache_path(self.source, request_hash)),
+                    request_metadata=request_metadata,
+                )
+            LOGGER.info(
+                "Ignoring failed cache entry for %s:%s (status=%s)",
+                self.source,
+                request_hash,
+                cached_status,
             )
-            return IngestionResponse(
-                source=self.source,
-                endpoint=endpoint,
-                request_hash=request_hash,
-                request_url=request_url,
-                http_status=cached_entry.get("http_status"),
-                payload=cached_entry.get("response_json", cached_entry.get("response_text")),
-                response_hash=cached_entry.get("response_hash"),
-                from_cache=True,
-                dry_run=False,
-                cache_path=str(self.cache.cache_path(self.source, request_hash)),
-                request_metadata=request_metadata,
-            )
+            if from_cache_only:
+                raise CacheMissError(
+                    f"Only failed cache entry exists for {self.source}:{request_hash} "
+                    f"(status={cached_status})"
+                )
 
         if from_cache_only:
             raise CacheMissError(f"Cache miss for {self.source}:{request_hash}")
@@ -244,6 +257,8 @@ class BaseAPIClient:
         )
         if quota_status.limit is not None:
             record_quota_usage(self.repository, self.source)
+        if response.status_code >= 400:
+            response.raise_for_status()
 
         return IngestionResponse(
             source=self.source,
@@ -338,3 +353,12 @@ class BaseAPIClient:
             )
         except Exception as exc:  # pragma: no cover - runtime integration path
             LOGGER.warning("Cache hit log failed for %s: %s", self.source, exc)
+
+    def _cache_http_status(self, cached_entry: dict[str, Any]) -> int | None:
+        value = cached_entry.get("http_status")
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None

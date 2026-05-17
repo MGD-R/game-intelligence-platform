@@ -64,9 +64,7 @@ class ExportRepositoryStub:
                     "name_normalized": "game one",
                 }
             ],
-            "stg.source_game_aliases": [
-                {"source": "rawg", "source_game_id": "1", "alias": "Game One", "language": "en"}
-            ],
+            "stg.source_game_aliases": [],
             "stg.source_game_external_ids": [
                 {
                     "source": "wikidata",
@@ -82,23 +80,8 @@ class ExportRepositoryStub:
             "stg.source_game_platforms": [
                 {"source": "rawg", "source_game_id": "1", "platform_name": "PC"}
             ],
-            "stg.source_game_companies": [
-                {
-                    "source": "rawg",
-                    "source_game_id": "1",
-                    "company_name": "Studio",
-                    "company_role": "developer",
-                }
-            ],
-            "stg.source_game_descriptions": [
-                {
-                    "source": "rawg",
-                    "source_game_id": "1",
-                    "description_type": "summary",
-                    "language": "en",
-                    "description_text": "Description",
-                }
-            ],
+            "stg.source_game_companies": [],
+            "stg.source_game_descriptions": [],
             "stg.source_game_ratings": [
                 {
                     "source": "rawg",

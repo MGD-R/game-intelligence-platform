@@ -44,7 +44,8 @@ def build_feature_row(
     else:
         reasons["release_year_diff"] = "missing release year"
 
-    external_id_exact_match = source_b.external_ids.get("rawg") == source_a.source_game_id
+    rawg_reference = source_a.external_ids.get("rawg") or source_a.source_game_id
+    external_id_exact_match = source_b.external_ids.get("rawg") == rawg_reference
     developer_overlap = jaccard_similarity(source_a.developers, source_b.developers)
     if developer_overlap is None:
         reasons["developer_overlap"] = "missing developer data"

@@ -18,9 +18,11 @@ x-dev-volumes: &dev-volumes
   - ./src:/app/src
   - ./configs:/app/configs
   - ./data:/app/data
+  - ./data_packs:/app/data_packs
   - ./docker:/app/docker
   - ./sql:/app/sql
   - ./tests:/app/tests
+  - ./.git:/app/.git:ro
   - ./pyproject.toml:/app/pyproject.toml:ro
   - ./README.md:/app/README.md:ro
 

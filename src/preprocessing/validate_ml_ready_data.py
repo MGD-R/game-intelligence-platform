@@ -134,19 +134,22 @@ def validate_ml_ready_state(
         if source_name in optional_sources and count == 0:
             validation.warnings.append(f"optional source not loaded: {source_name}")
 
-    external_id_counts = {
-        source_name: repository.count_rows("stg.source_game_external_ids", source=source_name)
-        for source_name in required_sources
-    }
-    validation.counts.update(
-        {
-            f"{source_name}_external_id_count": count
-            for source_name, count in external_id_counts.items()
-        }
+    rawg_rows = repository.fetch_staging_rows("stg.source_games", source="rawg")
+    rawg_slug_count = sum(1 for row in rawg_rows if row.get("slug") not in (None, ""))
+    wikidata_external_id_count = repository.count_rows(
+        "stg.source_game_external_ids",
+        source="wikidata",
     )
-    for source_name, count in external_id_counts.items():
-        if validation.counts[f"{source_name}_game_count"] > 0 and count == 0 and not allow_empty:
-            validation.errors.append(f"missing external IDs for source: {source_name}")
+    validation.counts["rawg_slug_count"] = rawg_slug_count
+    validation.counts["wikidata_external_id_count"] = wikidata_external_id_count
+    if validation.counts["rawg_game_count"] > 0 and rawg_slug_count == 0 and not allow_empty:
+        validation.errors.append("missing RAWG slugs for source: rawg")
+    if (
+        validation.counts["wikidata_game_count"] > 0
+        and wikidata_external_id_count == 0
+        and not allow_empty
+    ):
+        validation.errors.append("missing external IDs for source: wikidata")
 
     candidate_pair_count = repository.count_rows("ml.entity_candidate_pairs")
     feature_count = repository.count_rows("ml.entity_resolution_features")

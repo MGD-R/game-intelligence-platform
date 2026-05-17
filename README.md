@@ -69,6 +69,7 @@ make rawg-index
 make rawg-staging
 make wikidata-check
 make wikidata-identity
+make wikidata-by-rawg
 make wikidata-staging
 make steam-check
 make steam-appids
@@ -94,6 +95,7 @@ make manual-review-seed
 make export-ml-ready
 make dataset-manifest
 make ml-ready-data
+make mvp-rawg-wikidata
 make export-data-pack
 make import-data-pack DATA_PACK=data_packs/gip_demo_local
 make restore-from-files DATA_PACK=data_packs/gip_demo_local
@@ -116,6 +118,7 @@ make rag
 These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
 `make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
 `make wikidata` runs the safe demo pipeline (`wikidata-identity`, `wikidata-staging`) and does not request EntityData by default.
+`make wikidata-by-rawg` runs the preferred first live MVP path: narrow batch SPARQL by RAWG IDs already present in staging.
 `make steam` runs the targeted enrichment pipeline (`steam-appids`, `steam-details`, `steam-staging`) and does not scan the full Steam catalog.
 `make igdb` stays optional and targeted: it selects IGDB IDs from Wikidata external IDs, loads batch details, and maps them into staging without enabling IGDB by default.
 `make wikipedia` runs the targeted summaries pipeline (`wikipedia-pages`, `wikipedia-load`, `wikipedia-staging`) and does not use broad search or opensearch by default.
@@ -143,7 +146,7 @@ make rawg-reference
 make rawg-index
 make rawg-staging
 
-make wikidata-identity
+make wikidata-by-rawg
 make wikidata-staging
 
 make match-external-ids

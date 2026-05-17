@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.ingestion.base_client import IngestionResponse
-from src.ingestion.jobs import load_wikidata_entities, load_wikidata_identity
+from src.ingestion.jobs import (
+    load_wikidata_by_rawg_ids,
+    load_wikidata_entities,
+    load_wikidata_identity,
+)
 
 
 @dataclass
@@ -65,6 +69,24 @@ class FakeWikidataClient:
         )
 
 
+class FakeRepository:
+    def fetch_staging_rows(
+        self,
+        table_name: str,
+        *,
+        source: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, object]]:
+        assert table_name == "stg.source_games"
+        assert source == "rawg"
+        rows = [
+            {"source": "rawg", "source_game_id": "3498", "slug": "cities-skylines"},
+            {"source": "rawg", "source_game_id": "4200", "slug": "watch_dogs-2"},
+            {"source": "rawg", "source_game_id": "5678", "slug": "transistor"},
+        ]
+        return rows if limit is None else rows[:limit]
+
+
 def test_load_wikidata_identity_dry_run(monkeypatch, capsys) -> None:
     logger = FakeLogger()
     monkeypatch.setattr(load_wikidata_identity, "WikidataClient", FakeWikidataClient)
@@ -117,3 +139,24 @@ def test_load_wikidata_entities_with_limit(monkeypatch, capsys, tmp_path) -> Non
         "error_message": None,
     }
     assert "Q12345" in capsys.readouterr().out
+
+
+def test_load_wikidata_by_rawg_ids_dry_run(monkeypatch, capsys) -> None:
+    logger = FakeLogger()
+    monkeypatch.setattr(load_wikidata_by_rawg_ids, "WikidataClient", FakeWikidataClient)
+    monkeypatch.setattr(load_wikidata_by_rawg_ids, "IngestionRepository", FakeRepository)
+    monkeypatch.setattr(load_wikidata_by_rawg_ids, "PipelineRunLogger", lambda **_: logger)
+
+    exit_code = load_wikidata_by_rawg_ids.main(
+        ["--dry-run", "--limit", "3", "--batch-size", "2"]
+    )
+
+    assert exit_code == 0
+    assert logger.finished == {
+        "status": "completed",
+        "metrics": {"rawg_slug_count": 3, "batch_count": 2, "batch_size": 2},
+        "error_message": None,
+    }
+    output = capsys.readouterr().out
+    assert "cities-skylines" in output
+    assert "watch_dogs-2" in output

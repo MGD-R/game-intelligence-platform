@@ -5,7 +5,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 .PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
 	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
-	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
+	wikidata-check wikidata-identity wikidata-by-rawg wikidata-entities wikidata-staging wikidata-demo wikidata mvp-rawg-wikidata \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
 	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
@@ -118,6 +118,10 @@ wikidata-identity:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_identity
 
+wikidata-by-rawg:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_by_rawg_ids --limit 400 --batch-size 50
+
 wikidata-entities:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_entities
@@ -127,6 +131,17 @@ wikidata-staging:
 	$(WORKER_RUN) python -m src.preprocessing.wikidata_to_staging
 
 wikidata-demo: wikidata-identity wikidata-staging
+
+mvp-rawg-wikidata:
+	$(MAKE) wikidata-by-rawg
+	$(MAKE) wikidata-staging
+	$(MAKE) match-external-ids
+	$(MAKE) candidate-pairs
+	$(MAKE) feature-base
+	$(MAKE) dq
+	$(MAKE) anomalies
+	$(MAKE) export-analysis
+	$(MAKE) ml-ready-data
 
 match-external-ids:
 	$(COMPOSE) up -d postgres

@@ -11,7 +11,6 @@ class ValidationRepositoryStub:
             ("stg.source_games", "steam"): 0,
             ("stg.source_games", "wikipedia"): 0,
             ("stg.source_games", "igdb"): 0,
-            ("stg.source_game_external_ids", "rawg"): rawg_count,
             ("stg.source_game_external_ids", "wikidata"): wikidata_count,
             ("ml.entity_candidate_pairs", None): 1,
             ("ml.entity_resolution_features", None): 1,
@@ -66,6 +65,7 @@ class ValidationRepositoryStub:
                     {
                         "source": "rawg",
                         "source_game_id": "1",
+                        "slug": "game-one",
                         "name": "Game One",
                         "name_normalized": "game one",
                         "release_year": 2013,

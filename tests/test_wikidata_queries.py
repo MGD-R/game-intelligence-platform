@@ -1,4 +1,4 @@
-from src.ingestion.wikidata_queries import build_query
+from src.ingestion.wikidata_queries import build_query, rawg_ids_query
 
 
 def test_external_ids_query_contains_required_properties_and_limit() -> None:
@@ -17,3 +17,15 @@ def test_labels_aliases_query_contains_required_alias_fields() -> None:
     assert "aliasEn" in query
     assert 'LANG(?labelRu) = "ru"' in query
     assert "LIMIT 10" in query
+
+
+def test_rawg_ids_query_is_narrow_and_uses_values() -> None:
+    query = rawg_ids_query(["cities-skylines", "watch_dogs-2"])
+
+    assert "VALUES ?rawg" in query
+    assert '"cities-skylines"' in query
+    assert '"watch_dogs-2"' in query
+    assert "?game wdt:P9968 ?rawg" in query
+    assert "P1733" in query
+    assert "P9043" in query
+    assert 'LANG(?labelRu) = "ru"' in query
