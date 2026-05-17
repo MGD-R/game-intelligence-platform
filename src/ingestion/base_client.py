@@ -27,6 +27,31 @@ class CacheMissError(RuntimeError):
     """Raised when cache-only mode is requested and no cache entry exists."""
 
 
+class HTTPStatusError(RuntimeError):
+    """Raised when an HTTP response remains unsuccessful after retries."""
+
+    def __init__(
+        self,
+        *,
+        source: str,
+        endpoint: str,
+        status_code: int | None,
+        request_hash: str,
+        from_cache: bool,
+    ) -> None:
+        status = status_code if status_code is not None else "unknown"
+        location = "cache" if from_cache else "network"
+        super().__init__(
+            f"{source} request failed with HTTP {status} for {endpoint} "
+            f"(request_hash={request_hash}, source={location})"
+        )
+        self.source = source
+        self.endpoint = endpoint
+        self.status_code = status_code
+        self.request_hash = request_hash
+        self.from_cache = from_cache
+
+
 @dataclass(slots=True)
 class IngestionResponse:
     source: str
@@ -138,33 +163,57 @@ class BaseAPIClient:
                 request_metadata=request_metadata,
             )
 
-        if use_cache and not force_refresh and self.cache.exists(self.source, request_hash):
+        cache_exists = (
+            use_cache
+            and not force_refresh
+            and self.cache.exists(self.source, request_hash)
+        )
+        if cache_exists:
             cached_entry = self.cache.read(self.source, request_hash)
-            self._safe_record_cache_hit(
-                endpoint=endpoint,
-                request_hash=request_hash,
-                request_url=request_url,
-                request_params=request_params,
-                request_body=request_body,
-                cached_entry=cached_entry,
-                method=method,
-            )
-            return IngestionResponse(
-                source=self.source,
-                endpoint=endpoint,
-                request_hash=request_hash,
-                request_url=request_url,
-                http_status=cached_entry.get("http_status"),
-                payload=cached_entry.get("response_json", cached_entry.get("response_text")),
-                response_hash=cached_entry.get("response_hash"),
-                from_cache=True,
-                dry_run=False,
-                cache_path=str(self.cache.cache_path(self.source, request_hash)),
-                request_metadata=request_metadata,
-            )
+            cached_status = cached_entry.get("http_status")
+            if isinstance(cached_status, int) and cached_status >= 400:
+                if from_cache_only:
+                    raise HTTPStatusError(
+                        source=self.source,
+                        endpoint=endpoint,
+                        status_code=cached_status,
+                        request_hash=request_hash,
+                        from_cache=True,
+                    )
+            else:
+                self._safe_record_cache_hit(
+                    endpoint=endpoint,
+                    request_hash=request_hash,
+                    request_url=request_url,
+                    request_params=request_params,
+                    request_body=request_body,
+                    cached_entry=cached_entry,
+                    method=method,
+                )
+                return IngestionResponse(
+                    source=self.source,
+                    endpoint=endpoint,
+                    request_hash=request_hash,
+                    request_url=request_url,
+                    http_status=cached_entry.get("http_status"),
+                    payload=cached_entry.get("response_json", cached_entry.get("response_text")),
+                    response_hash=cached_entry.get("response_hash"),
+                    from_cache=True,
+                    dry_run=False,
+                    cache_path=str(self.cache.cache_path(self.source, request_hash)),
+                    request_metadata=request_metadata,
+                )
 
         if from_cache_only:
             raise CacheMissError(f"Cache miss for {self.source}:{request_hash}")
+
+        if cache_exists:
+            LOGGER.warning(
+                "Ignoring failed cached response for %s %s (request_hash=%s)",
+                self.source,
+                endpoint,
+                request_hash,
+            )
 
         quota_status = ensure_quota_available(self.repository, self.source)
 
@@ -244,6 +293,15 @@ class BaseAPIClient:
         )
         if quota_status.limit is not None:
             record_quota_usage(self.repository, self.source)
+
+        if response.status_code >= 400:
+            raise HTTPStatusError(
+                source=self.source,
+                endpoint=endpoint,
+                status_code=response.status_code,
+                request_hash=request_hash,
+                from_cache=False,
+            )
 
         return IngestionResponse(
             source=self.source,

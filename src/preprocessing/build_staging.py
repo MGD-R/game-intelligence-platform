@@ -99,7 +99,9 @@ def run_source_staging(
             repository.count_rows("raw.wikidata_sparql_results") == 0
             and repository.count_rows("raw.wikidata_entities") == 0
         ):
-            raise RuntimeError("Wikidata raw tables are empty. Run `make wikidata-demo` first.")
+            raise RuntimeError(
+                "Wikidata raw tables are empty. Run `make wikidata-by-rawg` first."
+            )
         sparql_payloads, entity_payloads = load_wikidata_payloads(repository)
         if limit is not None:
             sparql_payloads = sparql_payloads[:limit]

@@ -29,12 +29,14 @@ REQUIRED_TABLES = (
 )
 FOLLOW_UP_COMMANDS = (
     "make rawg-demo",
-    "make wikidata-demo",
+    "make wikidata-by-rawg",
+    "make wikidata-staging",
     "make match-external-ids",
     "make staging",
     "make dq",
 )
 OPTIONAL_FOLLOW_UP_COMMANDS = ("make steam-demo", "make wikipedia-demo")
+REQUIRED_EXTERNAL_ID_SOURCES = ("wikidata",)
 
 
 @dataclass(slots=True)
@@ -136,7 +138,7 @@ def validate_ml_ready_state(
 
     external_id_counts = {
         source_name: repository.count_rows("stg.source_game_external_ids", source=source_name)
-        for source_name in required_sources
+        for source_name in (*required_sources, *optional_sources)
     }
     validation.counts.update(
         {
@@ -144,7 +146,8 @@ def validate_ml_ready_state(
             for source_name, count in external_id_counts.items()
         }
     )
-    for source_name, count in external_id_counts.items():
+    for source_name in REQUIRED_EXTERNAL_ID_SOURCES:
+        count = external_id_counts[source_name]
         if validation.counts[f"{source_name}_game_count"] > 0 and count == 0 and not allow_empty:
             validation.errors.append(f"missing external IDs for source: {source_name}")
 

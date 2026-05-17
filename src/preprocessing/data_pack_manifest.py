@@ -37,6 +37,15 @@ REPORT_EXPORTS = (
     "source_coverage.csv",
     "data_stage_summary.md",
 )
+OPTIONAL_SOURCES = ("steam", "wikipedia", "igdb")
+
+
+def _source_has_rows(repository: IngestionRepository, source_name: str) -> bool:
+    raw_row_count = sum(
+        repository.count_rows(table_name, source=source_name) for table_name in RAW_TABLE_EXPORTS
+    )
+    staging_row_count = repository.count_rows("stg.source_games", source=source_name)
+    return (raw_row_count + staging_row_count) > 0
 
 
 def git_value(*args: str) -> str | None:
@@ -93,12 +102,30 @@ def build_data_pack_manifest(
         source_name: repository.count_api_requests(source_name)
         for source_name in ("rawg", "wikidata", "steam", "wikipedia", "igdb")
     }
+    active_sources = [
+        source_name for source_name in sources if _source_has_rows(repository, source_name)
+    ]
+    checked_sources = [
+        source_name
+        for source_name in sources
+        if source_name not in active_sources and api_calls_by_source.get(source_name, 0) > 0
+    ]
+    optional_sources = [
+        source_name
+        for source_name in OPTIONAL_SOURCES
+        if source_name in sources
+        and source_name not in active_sources
+        and source_name not in checked_sources
+    ]
     return {
         "data_pack_id": data_pack_id,
         "created_at": datetime.now(UTC).isoformat(),
         "git_branch": git_value("branch", "--show-current"),
         "git_commit": git_value("rev-parse", "HEAD"),
         "sources": sources,
+        "active_sources": active_sources,
+        "checked_sources": checked_sources,
+        "optional_sources": optional_sources,
         "api_calls_by_source": api_calls_by_source,
         "row_counts": row_counts,
         "cache_root": "raw/cache",

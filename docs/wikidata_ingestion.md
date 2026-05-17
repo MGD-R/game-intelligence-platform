@@ -1,6 +1,6 @@
 # Wikidata Ingestion
 
-Wikidata is the MVP identity hub for deterministic matching across sources. This stage loads bulk SPARQL identity data, stores raw responses, and transforms the results into reusable staging tables.
+Wikidata is the MVP identity hub for deterministic matching across sources. The default MVP path loads targeted SPARQL identity data derived from RAWG staging, stores raw responses, and transforms the results into reusable staging tables.
 
 ## What It Loads
 
@@ -13,7 +13,7 @@ Wikidata is the MVP identity hub for deterministic matching across sources. This
 ## Safety Model
 
 - `make wikidata-check` performs a dry-run request preview only
-- `make wikidata` runs the safe demo pipeline and does not call EntityData
+- `make wikidata` runs the safe targeted pipeline and does not call broad EntityData
 - `make wikidata-entities` is targeted only and defaults to `--limit 0`
 - request metadata uses header redaction so `WIKIMEDIA_USER_AGENT` is not printed
 
@@ -21,11 +21,14 @@ Wikidata is the MVP identity hub for deterministic matching across sources. This
 
 ```bash
 make wikidata-check
+make wikidata-by-rawg
 make wikidata-identity
 make wikidata-entities
 make wikidata-staging
 make wikidata
 ```
+
+`make wikidata-by-rawg` is the recommended default for the first live run. `make wikidata-identity` remains available as a broader identity backfill path, but it is no longer the default MVP route.
 
 ## Populated Tables
 

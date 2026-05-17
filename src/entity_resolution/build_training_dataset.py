@@ -169,7 +169,8 @@ def main(argv: list[str] | None = None) -> int:
     training_frame = build_training_frame(candidate_pairs, feature_base, source_games)
     if training_frame.is_empty() and not args.allow_empty:
         raise RuntimeError(
-            "Training dataset is empty. Run `make rawg-demo`, `make wikidata-demo`, "
+            "Training dataset is empty. Run `make rawg-demo`, `make wikidata-by-rawg`, "
+            "`make wikidata-staging`, "
             "`make match-external-ids`, `make staging`, and `make ml-ready-data` first."
         )
 

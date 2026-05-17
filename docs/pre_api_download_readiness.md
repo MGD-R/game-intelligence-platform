@@ -90,7 +90,7 @@ make rawg-reference
 make rawg-index
 make rawg-staging
 
-make wikidata-identity
+make wikidata-by-rawg
 make wikidata-staging
 
 make match-external-ids

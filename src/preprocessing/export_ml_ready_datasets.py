@@ -32,7 +32,7 @@ DATASET_SPECS: dict[str, dict[str, object]] = {
     },
     "source_aliases": {
         "table": "stg.source_game_aliases",
-        "required": True,
+        "required": False,
         "schema": {
             "source": pl.Utf8,
             "source_game_id": pl.Utf8,
@@ -79,7 +79,7 @@ DATASET_SPECS: dict[str, dict[str, object]] = {
     },
     "source_companies": {
         "table": "stg.source_game_companies",
-        "required": True,
+        "required": False,
         "schema": {
             "source": pl.Utf8,
             "source_game_id": pl.Utf8,
@@ -89,7 +89,7 @@ DATASET_SPECS: dict[str, dict[str, object]] = {
     },
     "source_descriptions": {
         "table": "stg.source_game_descriptions",
-        "required": True,
+        "required": False,
         "schema": {
             "source": pl.Utf8,
             "source_game_id": pl.Utf8,

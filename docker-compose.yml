@@ -18,6 +18,7 @@ x-dev-volumes: &dev-volumes
   - ./src:/app/src
   - ./configs:/app/configs
   - ./data:/app/data
+  - ./data_packs:/app/data_packs
   - ./docker:/app/docker
   - ./sql:/app/sql
   - ./tests:/app/tests

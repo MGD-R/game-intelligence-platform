@@ -63,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     if not appids:
         raise RuntimeError(
             "No Steam AppIDs found in Wikidata staging external IDs. "
-            "Run `make wikidata-demo` and `make staging` first."
+            "Run `make wikidata-by-rawg`, `make wikidata-staging`, and `make staging` first."
         )
     if args.output_file:
         Path(args.output_file).write_text("\n".join(appids) + "\n", encoding="utf-8")
