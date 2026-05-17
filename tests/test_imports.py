@@ -32,6 +32,7 @@ MODULES = [
     "src.ingestion.jobs.load_igdb_games",
     "src.ingestion.jobs.load_igdb_reference",
     "src.ingestion.jobs.load_steam_details",
+    "src.ingestion.jobs.load_wikidata_by_rawg_ids",
     "src.ingestion.jobs.load_wikidata_entities",
     "src.ingestion.jobs.load_wikidata_identity",
     "src.ingestion.jobs.load_wikipedia_pages",

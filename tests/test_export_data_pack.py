@@ -26,14 +26,25 @@ class _ExportRepoStub:
         return []
 
     def count_api_requests(self, source: str) -> int:
-        return {"rawg": 1, "wikidata": 1}.get(source, 0)
+        return {"rawg": 1, "wikidata": 1, "steam": 1}.get(source, 0)
 
     def count_rows(self, table_name: str, *, source: str | None = None) -> int:
-        return {
+        total_counts = {
             "raw.rawg_game_index": 1,
             "raw.rawg_game_details": 1,
             "raw.wikidata_entities": 1,
-        }.get(table_name, 0)
+        }
+        source_counts = {
+            ("raw.rawg_game_index", "rawg"): 1,
+            ("raw.rawg_game_details", "rawg"): 1,
+            ("raw.wikidata_entities", "wikidata"): 1,
+            ("stg.source_games", "steam"): 0,
+            ("stg.source_games", "wikipedia"): 0,
+            ("stg.source_games", "igdb"): 0,
+        }
+        if source is not None:
+            return source_counts.get((table_name, source), 0)
+        return total_counts.get(table_name, 0)
 
 
 def test_export_data_pack_writes_jsonl_and_checksums(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -58,4 +69,7 @@ def test_export_data_pack_writes_jsonl_and_checksums(tmp_path: Path, monkeypatch
     assert rows[0]["request_hash"] == "abc"
     manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
     assert "raw/jsonl/rawg_game_index.jsonl.gz" in manifest["checksums"]
+    assert manifest["active_sources"] == ["rawg", "wikidata"]
+    assert manifest["checked_sources"] == ["steam"]
+    assert manifest["optional_sources"] == ["wikipedia", "igdb"]
     assert (output_dir / "checksums.sha256").exists()

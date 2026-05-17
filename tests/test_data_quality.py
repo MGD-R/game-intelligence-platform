@@ -129,6 +129,11 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
     assert summary["source_overlap_count"] == 1
     assert summary["conflict_count_by_field"]["release_year"] == 1
     assert summary["candidate_pair_summary"]["external_id_positive"] == 1
+    assert 0.0 <= summary["missing_release_date_rate"] <= 1.0
+    assert 0.0 <= summary["missing_description_rate"] <= 1.0
+    assert 0.0 <= summary["missing_developer_rate"] <= 1.0
+    assert 0.0 <= summary["missing_genre_rate"] <= 1.0
+    assert 0.0 <= summary["missing_platform_rate"] <= 1.0
     assert summary["steam_game_count"] == 1
     assert summary["steam_with_metacritic_count"] == 1
     assert summary["igdb_game_count"] == 1

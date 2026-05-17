@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import polars as pl
 
@@ -15,11 +18,32 @@ from src.utils.config import project_root
 
 
 def _normalize_value(value: Any) -> Any:
+    if isinstance(value, UUID):
+        return str(value)
     if isinstance(value, dict):
         return json.dumps(value, sort_keys=True, ensure_ascii=True)
     if isinstance(value, list):
         return json.dumps(value, sort_keys=False, ensure_ascii=True)
     return value
+
+
+def _normalize_value_for_dtype(value: Any, dtype: pl.DataType) -> Any:
+    normalized = _normalize_value(value)
+    if normalized is None:
+        return None
+    if dtype == pl.Utf8:
+        if isinstance(normalized, (date, datetime)):
+            return normalized.isoformat()
+        return str(normalized)
+    if dtype == pl.Float64:
+        if isinstance(normalized, Decimal):
+            return float(normalized)
+        return float(normalized)
+    if dtype == pl.Int64:
+        return int(normalized)
+    if dtype == pl.Boolean:
+        return bool(normalized)
+    return normalized
 
 
 def write_parquet(
@@ -30,9 +54,18 @@ def write_parquet(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if rows:
-        normalized_rows = [
-            {key: _normalize_value(value) for key, value in row.items()} for row in rows
-        ]
+        if schema:
+            normalized_rows = [
+                {
+                    key: _normalize_value_for_dtype(row.get(key), dtype)
+                    for key, dtype in schema.items()
+                }
+                for row in rows
+            ]
+        else:
+            normalized_rows = [
+                {key: _normalize_value(value) for key, value in row.items()} for row in rows
+            ]
         frame = pl.DataFrame(normalized_rows, schema=schema)
     elif schema:
         frame = pl.DataFrame(schema=schema)

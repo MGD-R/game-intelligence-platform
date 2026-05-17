@@ -112,6 +112,23 @@ class ExportRepositoryStub:
         return rows[table_name]
 
 
+class SparseExportRepositoryStub(ExportRepositoryStub):
+    def fetch_staging_rows(
+        self,
+        table_name: str,
+        *,
+        source: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, object]]:
+        if table_name in {
+            "stg.source_game_aliases",
+            "stg.source_game_companies",
+            "stg.source_game_descriptions",
+        }:
+            return []
+        return super().fetch_staging_rows(table_name, source=source, limit=limit)
+
+
 def test_exporter_writes_expected_files(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         "src.preprocessing.export_ml_ready_datasets.IngestionRepository",
@@ -147,3 +164,40 @@ def test_exporter_writes_expected_files(monkeypatch, tmp_path: Path) -> None:
     assert (tmp_path / "source_games.parquet").exists()
     assert (tmp_path / "manual_review_seed.parquet").exists()
     assert pl.read_parquet(tmp_path / "entity_candidate_pairs.parquet").height == 1
+
+
+def test_exporter_writes_empty_optional_parquet_files(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(
+        "src.preprocessing.export_ml_ready_datasets.IngestionRepository",
+        lambda: SparseExportRepositoryStub(),
+    )
+    monkeypatch.setattr(
+        "src.preprocessing.export_ml_ready_datasets.validate_ml_ready_state",
+        lambda *args, **kwargs: type("V", (), {"ok": True, "warnings": []})(),
+    )
+    monkeypatch.setattr(
+        "src.preprocessing.export_ml_ready_datasets.load_source_records",
+        lambda repository: {
+            ("rawg", "1"): SourceGameRecord(
+                source="rawg",
+                source_game_id="1",
+                name="Game One",
+                name_normalized="game one",
+                release_year=2013,
+            ),
+            ("wikidata", "Q1"): SourceGameRecord(
+                source="wikidata",
+                source_game_id="Q1",
+                name="Game One",
+                name_normalized="game one",
+                release_year=2013,
+            ),
+        },
+    )
+
+    exit_code = main(["--output-dir", str(tmp_path)])
+
+    assert exit_code == 0
+    assert pl.read_parquet(tmp_path / "source_aliases.parquet").height == 0
+    assert pl.read_parquet(tmp_path / "source_companies.parquet").height == 0
+    assert pl.read_parquet(tmp_path / "source_descriptions.parquet").height == 0
