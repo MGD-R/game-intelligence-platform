@@ -27,6 +27,10 @@ class CacheMissError(RuntimeError):
     """Raised when cache-only mode is requested and no cache entry exists."""
 
 
+class FailedCacheError(CacheMissError):
+    """Raised when cache-only mode finds only a cached failed response."""
+
+
 @dataclass(slots=True)
 class IngestionResponse:
     source: str
@@ -140,6 +144,7 @@ class BaseAPIClient:
 
         if use_cache and not force_refresh and self.cache.exists(self.source, request_hash):
             cached_entry = self.cache.read(self.source, request_hash)
+            cached_status = cached_entry.get("http_status")
             self._safe_record_cache_hit(
                 endpoint=endpoint,
                 request_hash=request_hash,
@@ -149,19 +154,31 @@ class BaseAPIClient:
                 cached_entry=cached_entry,
                 method=method,
             )
-            return IngestionResponse(
-                source=self.source,
-                endpoint=endpoint,
-                request_hash=request_hash,
-                request_url=request_url,
-                http_status=cached_entry.get("http_status"),
-                payload=cached_entry.get("response_json", cached_entry.get("response_text")),
-                response_hash=cached_entry.get("response_hash"),
-                from_cache=True,
-                dry_run=False,
-                cache_path=str(self.cache.cache_path(self.source, request_hash)),
-                request_metadata=request_metadata,
+            if cached_status is None or int(cached_status) < 400:
+                return IngestionResponse(
+                    source=self.source,
+                    endpoint=endpoint,
+                    request_hash=request_hash,
+                    request_url=request_url,
+                    http_status=cached_status,
+                    payload=cached_entry.get("response_json", cached_entry.get("response_text")),
+                    response_hash=cached_entry.get("response_hash"),
+                    from_cache=True,
+                    dry_run=False,
+                    cache_path=str(self.cache.cache_path(self.source, request_hash)),
+                    request_metadata=request_metadata,
+                )
+            LOGGER.warning(
+                "Ignoring failed cache entry for %s:%s with status %s",
+                self.source,
+                request_hash,
+                cached_status,
             )
+            if from_cache_only:
+                raise FailedCacheError(
+                    f"Cached failed response for {self.source}:{request_hash} "
+                    f"(HTTP {cached_status})"
+                )
 
         if from_cache_only:
             raise CacheMissError(f"Cache miss for {self.source}:{request_hash}")

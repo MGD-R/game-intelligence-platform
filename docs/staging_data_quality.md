@@ -66,7 +66,8 @@ If the required staged/demo inputs are missing, the commands fail explicitly and
 
 ```bash
 make rawg-demo
-make wikidata-demo
+make wikidata-by-rawg
+make wikidata-staging
 make entity-data-base
 ```
 

@@ -11,8 +11,11 @@ class ValidationRepositoryStub:
             ("stg.source_games", "steam"): 0,
             ("stg.source_games", "wikipedia"): 0,
             ("stg.source_games", "igdb"): 0,
-            ("stg.source_game_external_ids", "rawg"): rawg_count,
+            ("stg.source_game_external_ids", "rawg"): 0,
             ("stg.source_game_external_ids", "wikidata"): wikidata_count,
+            ("stg.source_game_external_ids", "steam"): 0,
+            ("stg.source_game_external_ids", "wikipedia"): 0,
+            ("stg.source_game_external_ids", "igdb"): 0,
             ("ml.entity_candidate_pairs", None): 1,
             ("ml.entity_resolution_features", None): 1,
         }
@@ -129,3 +132,16 @@ def test_validator_allows_empty_with_warnings(tmp_path) -> None:
 
     assert validation.ok
     assert "optional source not loaded: steam" in validation.warnings
+
+
+def test_validator_allows_missing_rawg_external_ids_when_wikidata_ids_exist(tmp_path) -> None:
+    validation = validate_ml_ready_state(
+        ValidationRepositoryStub(rawg_count=1, wikidata_count=1),
+        dry_run=True,
+        output_dir=str(tmp_path / "processed"),
+        reports_dir=str(tmp_path / "reports"),
+        manifests_dir=str(tmp_path / "manifests"),
+    )
+
+    assert validation.ok
+    assert not any("missing external IDs for source: rawg" in error for error in validation.errors)

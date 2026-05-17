@@ -99,7 +99,10 @@ def run_source_staging(
             repository.count_rows("raw.wikidata_sparql_results") == 0
             and repository.count_rows("raw.wikidata_entities") == 0
         ):
-            raise RuntimeError("Wikidata raw tables are empty. Run `make wikidata-demo` first.")
+            raise RuntimeError(
+                "Wikidata raw tables are empty. Run `make wikidata-by-rawg` and "
+                "`make wikidata-staging` first."
+            )
         sparql_payloads, entity_payloads = load_wikidata_payloads(repository)
         if limit is not None:
             sparql_payloads = sparql_payloads[:limit]
@@ -117,7 +120,7 @@ def run_source_staging(
     raise ValueError(f"Unsupported source for staging build: {source}")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build and normalize staging tables.")
     parser.add_argument("--source", choices=("rawg", "wikidata"), help="Single source to rebuild.")
     parser.add_argument(
@@ -132,7 +135,7 @@ def main() -> int:
     )
     parser.add_argument("--rebuild", action="store_true", help="Accept explicit rebuild intent.")
     parser.add_argument("--limit", type=int, help="Optional row/payload limit for debug rebuilds.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     sources = [args.source] if args.source else []
     if args.all:

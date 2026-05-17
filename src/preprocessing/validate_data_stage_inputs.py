@@ -57,7 +57,8 @@ def validation_error_message(validation: StageInputValidation) -> str:
         parts.append("missing staged source data: " + ", ".join(validation.missing_sources))
     follow_up = (
         "Run previous stages first. Expected prerequisites: "
-        "`make rawg-demo` and `make wikidata-demo` after the RAWG/Wikidata ingestion stages."
+        "`make rawg-demo`, `make wikidata-by-rawg`, and `make wikidata-staging` after the "
+        "RAWG/Wikidata ingestion stages."
     )
     return "; ".join(parts + [follow_up])
 

@@ -5,7 +5,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 .PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
 	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
-	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
+	wikidata-check wikidata-by-rawg wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
 	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
@@ -14,7 +14,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-review-queue \
 	er-baseline export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
-	recommendations rag demo-data all
+	recommendations rag demo-data full-data-plan all
 
 DATA_PACK ?= data_packs/gip_demo_local
 
@@ -114,6 +114,10 @@ wikidata:
 wikidata-check:
 	$(WORKER_RUN) python -m src.ingestion.wikidata_client --check --dry-run --limit 1
 
+wikidata-by-rawg:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_by_rawg_ids
+
 wikidata-identity:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_identity
@@ -126,7 +130,7 @@ wikidata-staging:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.wikidata_to_staging
 
-wikidata-demo: wikidata-identity wikidata-staging
+wikidata-demo: wikidata-by-rawg wikidata-staging
 
 match-external-ids:
 	$(COMPOSE) up -d postgres
@@ -297,13 +301,35 @@ rag:
 
 demo-data:
 	$(MAKE) rawg-demo
-	$(MAKE) wikidata-demo
+	$(MAKE) wikidata-by-rawg
+	$(MAKE) wikidata-staging
 	$(MAKE) match-external-ids
 	$(MAKE) candidate-pairs
 	$(MAKE) feature-base
 	$(MAKE) dq
+	$(MAKE) anomalies
+	$(MAKE) export-analysis
 	$(MAKE) ml-ready-data
 	$(MAKE) export-data-pack
+
+full-data-plan:
+	@printf '%s\n' \
+		'Controlled full-download plan:' \
+		'1. make check-sources-network' \
+		'2. scale rawg-index gradually' \
+		'3. make rawg-staging' \
+		'4. make wikidata-by-rawg' \
+		'5. make wikidata-staging' \
+		'6. make match-external-ids' \
+		'7. make candidate-pairs' \
+		'8. make feature-base' \
+		'9. make dq' \
+		'10. make anomalies' \
+		'11. make export-analysis' \
+		'12. make ml-ready-data' \
+		'13. make export-data-pack' \
+		'14. only then targeted rawg-details for selected gaps/problem cases' \
+		'15. optional later: steam-demo, wikipedia-demo, igdb-demo'
 
 export-data-pack:
 	$(COMPOSE) up -d postgres

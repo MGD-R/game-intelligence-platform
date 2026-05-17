@@ -842,6 +842,15 @@ class IngestionRepository:
         rows: list[Mapping[str, object]],
         key_columns: list[str],
     ) -> None:
+        from psycopg.types.json import Jsonb
+
+        def adapt_value(value: object) -> object:
+            if isinstance(value, Mapping):
+                return Jsonb(dict(value))
+            if isinstance(value, list):
+                return Jsonb(list(value))
+            return value
+
         schema_name, table = table_name.split(".", maxsplit=1)
         with self.connection() as connection:
             with connection.cursor() as cursor:
@@ -862,5 +871,5 @@ class IngestionRepository:
                 )
                 cursor.executemany(
                     insert_query,
-                    [tuple(row[column] for column in columns) for row in rows],
+                    [tuple(adapt_value(row[column]) for column in columns) for row in rows],
                 )

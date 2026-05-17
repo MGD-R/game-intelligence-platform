@@ -30,6 +30,7 @@ Database storage design: [docs/database_schema.md](docs/database_schema.md).
 Ingestion framework notes: [docs/ingestion_framework.md](docs/ingestion_framework.md).
 RAWG ingestion flow: [docs/rawg_ingestion.md](docs/rawg_ingestion.md).
 Wikidata identity ingestion: [docs/wikidata_ingestion.md](docs/wikidata_ingestion.md).
+Full data download strategy: [docs/full_data_download_strategy.md](docs/full_data_download_strategy.md).
 External ID matching and candidate corpus: [docs/external_id_matching.md](docs/external_id_matching.md).
 Staging normalization and data-quality layer: [docs/staging_data_quality.md](docs/staging_data_quality.md).
 Steam targeted enrichment: [docs/steam_enrichment.md](docs/steam_enrichment.md).
@@ -68,6 +69,7 @@ make rawg-reference
 make rawg-index
 make rawg-staging
 make wikidata-check
+make wikidata-by-rawg
 make wikidata-identity
 make wikidata-staging
 make steam-check
@@ -115,7 +117,7 @@ make rag
 
 These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
 `make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
-`make wikidata` runs the safe demo pipeline (`wikidata-identity`, `wikidata-staging`) and does not request EntityData by default.
+`make wikidata` runs the safe targeted pipeline (`wikidata-by-rawg`, `wikidata-staging`) and does not request EntityData by default.
 `make steam` runs the targeted enrichment pipeline (`steam-appids`, `steam-details`, `steam-staging`) and does not scan the full Steam catalog.
 `make igdb` stays optional and targeted: it selects IGDB IDs from Wikidata external IDs, loads batch details, and maps them into staging without enabling IGDB by default.
 `make wikipedia` runs the targeted summaries pipeline (`wikipedia-pages`, `wikipedia-load`, `wikipedia-staging`) and does not use broad search or opensearch by default.
@@ -143,7 +145,7 @@ make rawg-reference
 make rawg-index
 make rawg-staging
 
-make wikidata-identity
+make wikidata-by-rawg
 make wikidata-staging
 
 make match-external-ids
@@ -158,6 +160,7 @@ make export-data-pack
 ```
 
 This order keeps the first live run narrow and reproducible. It avoids optional enrichments until the RAWG + Wikidata baseline has been verified locally.
+`make wikidata-identity` remains available as a broader non-default path for global/backfill-style Wikidata exploration.
 
 ## Optional Enrichment After MVP
 

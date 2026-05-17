@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     if not ids:
         raise RuntimeError(
             "No IGDB IDs available for targeted load. "
-            "Run `make wikidata-demo` and `make staging` first."
+            "Run `make wikidata-by-rawg`, `make wikidata-staging`, and `make staging` first."
         )
     if client.repository is None:
         raise RuntimeError("Database repository is unavailable for IGDB game load.")

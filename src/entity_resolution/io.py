@@ -16,7 +16,8 @@ from src.utils.config import load_yaml_config, project_root
 
 ER_REQUIRED_COMMANDS = (
     "make rawg-demo",
-    "make wikidata-demo",
+    "make wikidata-by-rawg",
+    "make wikidata-staging",
     "make match-external-ids",
     "make staging",
     "make ml-ready-data",

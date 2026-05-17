@@ -107,7 +107,7 @@ def main(argv: list[str] | None = None) -> int:
     if not pages:
         raise RuntimeError(
             "No Wikipedia sitelinks found in Wikidata staging URLs. "
-            "Run `make wikidata-demo` and `make staging` first."
+            "Run `make wikidata-by-rawg`, `make wikidata-staging`, and `make staging` first."
         )
     if args.output_file:
         output = "\n".join(json.dumps(page, ensure_ascii=True) for page in pages) + "\n"
