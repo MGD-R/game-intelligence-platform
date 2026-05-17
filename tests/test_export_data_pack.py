@@ -11,10 +11,29 @@ class _ExportRepoStub:
     def fetch_raw_rows(self, table_name: str) -> list[dict[str, object]]:
         if table_name == "raw.rawg_game_index":
             return [{"endpoint": "/games", "request_hash": "abc", "response_json": {"id": 1}}]
+        if table_name == "raw.rawg_game_details":
+            return [
+                {"endpoint": "/games/1", "request_hash": "details-1", "response_json": {"id": 1}}
+            ]
+        if table_name == "raw.wikidata_entities":
+            return [
+                {
+                    "endpoint": "/entity/Q1",
+                    "request_hash": "entity-1",
+                    "response_json": {"id": "Q1"},
+                }
+            ]
         return []
 
+    def count_api_requests(self, source: str) -> int:
+        return {"rawg": 1, "wikidata": 1}.get(source, 0)
+
     def count_rows(self, table_name: str, *, source: str | None = None) -> int:
-        return 0
+        return {
+            "raw.rawg_game_index": 1,
+            "raw.rawg_game_details": 1,
+            "raw.wikidata_entities": 1,
+        }.get(table_name, 0)
 
 
 def test_export_data_pack_writes_jsonl_and_checksums(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -32,8 +51,11 @@ def test_export_data_pack_writes_jsonl_and_checksums(tmp_path: Path, monkeypatch
 
     exported = output_dir / "raw" / "jsonl" / "rawg_game_index.jsonl.gz"
     assert exported.exists()
+    assert (output_dir / "raw" / "jsonl" / "rawg_game_details.jsonl.gz").exists()
+    assert (output_dir / "raw" / "jsonl" / "wikidata_entities.jsonl.gz").exists()
     with gzip.open(exported, "rt", encoding="utf-8") as handle:
         rows = [json.loads(line) for line in handle if line.strip()]
     assert rows[0]["request_hash"] == "abc"
-    assert (output_dir / "manifest.json").exists()
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert "raw/jsonl/rawg_game_index.jsonl.gz" in manifest["checksums"]
     assert (output_dir / "checksums.sha256").exists()

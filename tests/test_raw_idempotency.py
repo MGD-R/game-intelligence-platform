@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
+import pytest
+
 from src.ingestion.repository import IngestionRepository
 
 
@@ -79,3 +83,96 @@ def test_import_raw_record_maps_optional_fields(monkeypatch) -> None:  # type: i
     assert captured["table_name"] == "raw.igdb_reference_data"
     assert captured["from_cache"] is True
     assert captured["response_hash"] is None
+
+
+def test_insert_raw_record_is_idempotent_in_postgres() -> None:
+    repository = IngestionRepository()
+    endpoint = "/tests/idempotency"
+    request_hash = "idempotency-hash"
+    source_record_id = "test-record"
+
+    try:
+        with repository.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    DELETE FROM raw.rawg_game_index
+                    WHERE endpoint = %s AND request_hash = %s AND source_record_id = %s
+                    """,
+                    (endpoint, request_hash, source_record_id),
+                )
+    except Exception as exc:  # pragma: no cover - environment-specific skip
+        pytest.skip(f"postgres not available for integration test: {exc}")
+
+    repository.insert_raw_record(
+        table_name="raw.rawg_game_index",
+        endpoint=endpoint,
+        request_hash=request_hash,
+        source_record_id=source_record_id,
+        response_json={"id": 1, "name": "first"},
+        response_hash="resp-a",
+        response_storage_path="cache/rawg/resp-a.json",
+        from_cache=False,
+        http_status=200,
+        error_message=None,
+    )
+
+    with repository.connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, loaded_at, from_cache, response_hash
+                FROM raw.rawg_game_index
+                WHERE endpoint = %s AND request_hash = %s AND source_record_id = %s
+                """,
+                (endpoint, request_hash, source_record_id),
+            )
+            first_row = cursor.fetchone()
+
+    repository.insert_raw_record(
+        table_name="raw.rawg_game_index",
+        endpoint=endpoint,
+        request_hash=request_hash,
+        source_record_id=source_record_id,
+        response_json={"id": 1, "name": "second"},
+        response_hash="resp-b",
+        response_storage_path="cache/rawg/resp-b.json",
+        from_cache=True,
+        http_status=200,
+        error_message=None,
+    )
+
+    with repository.connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM raw.rawg_game_index
+                WHERE endpoint = %s AND request_hash = %s AND source_record_id = %s
+                """,
+                (endpoint, request_hash, source_record_id),
+            )
+            count_row = cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT from_cache, response_hash, loaded_at
+                FROM raw.rawg_game_index
+                WHERE endpoint = %s AND request_hash = %s AND source_record_id = %s
+                """,
+                (endpoint, request_hash, source_record_id),
+            )
+            second_row = cursor.fetchone()
+            cursor.execute(
+                """
+                DELETE FROM raw.rawg_game_index
+                WHERE endpoint = %s AND request_hash = %s AND source_record_id = %s
+                """,
+                (endpoint, request_hash, source_record_id),
+            )
+
+    assert count_row["row_count"] == 1
+    assert second_row["from_cache"] is True
+    assert second_row["response_hash"] == "resp-b"
+    assert isinstance(first_row["loaded_at"], datetime)
+    assert isinstance(second_row["loaded_at"], datetime)
+    assert second_row["loaded_at"] >= first_row["loaded_at"].astimezone(UTC)

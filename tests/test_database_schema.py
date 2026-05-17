@@ -66,3 +66,11 @@ def test_schema_checker_metadata_is_stable() -> None:
     assert "source_games" in EXPECTED_TABLES["stg"]
     ml_sql = read_file("sql/ml/create_ml_tables.sql")
     assert "CREATE TABLE IF NOT EXISTS ml.entity_resolution_predictions" in ml_sql
+
+
+def test_raw_unique_indexes_are_not_partial() -> None:
+    raw_sql = read_file("sql/raw/create_raw_tables.sql")
+    init_sql = read_file("docker/postgres/init/004_create_raw_tables.sql")
+
+    assert "WHERE request_hash IS NOT NULL" not in raw_sql
+    assert "WHERE request_hash IS NOT NULL" not in init_sql

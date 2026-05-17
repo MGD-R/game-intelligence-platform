@@ -510,6 +510,18 @@ class IngestionRepository:
                 row = cursor.fetchone()
                 return int(row["row_count"])
 
+    def count_api_requests(self, source: str) -> int:
+        query = """
+            SELECT COUNT(*) AS row_count
+            FROM meta.api_request_log
+            WHERE source = %s
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, (source,))
+                row = cursor.fetchone()
+                return int(row["row_count"])
+
     def fetch_existing_tables(self, *, schemas: list[str]) -> set[tuple[str, str]]:
         query = """
             SELECT table_schema, table_name

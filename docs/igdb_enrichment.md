@@ -89,3 +89,4 @@ Staging:
 - IGDB is scaffolded for dry-run validation and targeted batch loading by IDs.
 - It is still optional and not part of default `make demo-data`.
 - First live download should still start with RAWG + Wikidata, then data quality, then optional enrichments.
+- IGDB should only be enabled after `make igdb-check` and an explicitly approved tiny live-check confirm that credentials, token flow, and quota behavior are stable.

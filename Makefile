@@ -3,7 +3,7 @@ COMPOSE_DEV := $(COMPOSE) --profile dev
 WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
 .PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
-	db-check test lint format check-sources check-sources-network cache-list quota-status \
+	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
@@ -61,6 +61,10 @@ db-check:
 
 test:
 	$(WORKER_RUN) python -m pytest
+
+test-db:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m pytest tests/test_raw_idempotency.py
 
 lint:
 	$(WORKER_RUN) python -m ruff check src tests
@@ -299,6 +303,7 @@ demo-data:
 	$(MAKE) feature-base
 	$(MAKE) dq
 	$(MAKE) ml-ready-data
+	$(MAKE) export-data-pack
 
 export-data-pack:
 	$(COMPOSE) up -d postgres
@@ -318,7 +323,7 @@ export-raw-cache:
 
 data-pack-check:
 	$(COMPOSE) up -d postgres
-	$(WORKER_RUN) python -m src.preprocessing.export_data_pack --output $(DATA_PACK) --dry-run
+	$(WORKER_RUN) python -m src.preprocessing.import_data_pack --input $(DATA_PACK) --dry-run
 
 all:
 	$(MAKE) check-sources

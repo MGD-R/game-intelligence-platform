@@ -14,6 +14,7 @@ from src.preprocessing.data_pack_manifest import (
     PROCESSED_EXPORTS,
     RAW_TABLE_EXPORTS,
     REPORT_EXPORTS,
+    build_checksums_map,
     build_data_pack_manifest,
     write_checksums,
     write_manifest,
@@ -107,11 +108,13 @@ def main(argv: list[str] | None = None) -> int:
             if copy_if_exists(reports_root / filename, destination):
                 written_paths.append(destination)
 
+    checksums = build_checksums_map(output_root, written_paths)
     manifest = build_data_pack_manifest(
         repository,
         data_pack_id=output_root.name,
         pack_root=output_root,
         sources=["rawg", "wikidata", "steam", "wikipedia", "igdb"],
+        checksums=checksums,
     )
     manifest_path = write_manifest(output_root / "manifest.json", manifest)
     written_paths.append(manifest_path)

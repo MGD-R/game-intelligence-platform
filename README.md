@@ -37,6 +37,7 @@ Wikipedia summaries enrichment: [docs/wikipedia_summaries.md](docs/wikipedia_sum
 ML-ready datasets and final data-stage build: [docs/ml_ready_datasets.md](docs/ml_ready_datasets.md).
 Entity Resolution baseline: [docs/entity_resolution_baseline.md](docs/entity_resolution_baseline.md).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
+Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
 
 ## Quick Start
 
@@ -124,6 +125,59 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make er-baseline` builds the weak-label training dataset, runs rule and Logistic Regression baselines, predicts matches, evaluates metrics, and prepares a manual review queue without external APIs.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
 
+## First Controlled API Download
+
+The data preparation contour is implemented, but it should not be considered fully proven until the first live end-to-end run is completed and exported to a data-pack.
+
+Recommended first live sources:
+
+- `RAWG` for discovery-oriented metadata.
+- `Wikidata` for identity, aliases, external IDs, and sitelinks.
+
+Recommended command order:
+
+```bash
+make check-sources-network
+
+make rawg-reference
+make rawg-index
+make rawg-staging
+
+make wikidata-identity
+make wikidata-staging
+
+make match-external-ids
+make candidate-pairs
+make feature-base
+
+make dq
+make anomalies
+make export-analysis
+make ml-ready-data
+make export-data-pack
+```
+
+This order keeps the first live run narrow and reproducible. It avoids optional enrichments until the RAWG + Wikidata baseline has been verified locally.
+
+## Optional Enrichment After MVP
+
+Steam and Wikipedia are optional targeted enrichments. IGDB is optional advanced enrichment and remains disabled by default until dry-runs and a tiny live-check are explicitly approved.
+
+```bash
+make steam-appids
+make steam-details
+make steam-staging
+
+make wikipedia-pages
+make wikipedia-load
+make wikipedia-staging
+
+make igdb-check
+make igdb-ids
+make igdb-games
+make igdb-staging
+```
+
 ## API Endpoints
 
 - `GET /health`
@@ -156,4 +210,5 @@ These commands run inside the `worker-dev` container and do not require local Py
 
 ## MVP vs Advanced
 
-The project now includes the full data-prepare contour, dry-run-safe optional IGDB scaffold, and file-based restore tooling. Live recommendation and RAG serving layers still remain follow-up work.
+The project now includes the full data-prepare contour, dry-run-safe optional IGDB scaffold, and file-based restore tooling.
+Business API endpoints, live recommendations, and RAG-facing product behavior remain follow-up work even though the current repository already includes baseline placeholder routes and offline pipeline scaffolding.

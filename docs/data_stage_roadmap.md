@@ -14,9 +14,17 @@ This roadmap defines the safe execution order for the first data-stage implement
 10. Stage 10: optional Wikipedia summaries by Wikidata sitelinks.
 11. Stage 11: optional IGDB batch enrichment by Wikidata IGDB IDs.
 12. Stage 12: ML-ready dataset export to PostgreSQL tables and Parquet snapshots.
+13. Stage 13: pre-API download readiness verification, data-pack restore hardening, and first live-run planning.
 
 Current data-stage goal:
 
 - stop before ML training;
 - prepare stable datasets for analysis, feature engineering, and future entity resolution;
 - avoid mass API loading until cache, retry, and quota controls are implemented.
+
+Current readiness guidance:
+
+- first controlled live download should use RAWG + Wikidata only;
+- Steam and Wikipedia should remain optional targeted enrichment after the MVP baseline is verified;
+- IGDB should stay disabled by default until dry-run checks and a tiny live-check are explicitly approved;
+- every first live run should finish with `make export-data-pack` so the contour can be restored without spending API quota again.

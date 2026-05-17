@@ -6,10 +6,16 @@ from src.preprocessing.data_pack_manifest import build_data_pack_manifest, write
 
 
 class _RepoStub:
+    def count_api_requests(self, source: str) -> int:
+        return {"rawg": 2, "wikidata": 1}.get(source, 0)
+
     def count_rows(self, table_name: str, *, source: str | None = None) -> int:
         counts = {
             "raw.rawg_game_index": 2,
+            "raw.rawg_game_details": 4,
+            "raw.wikidata_entities": 5,
             "stg.source_games": 3,
+            "stg.source_game_external_ids": 6,
             "ml.entity_candidate_pairs": 1,
         }
         return counts.get(table_name, 0)
@@ -27,5 +33,8 @@ def test_data_pack_manifest_has_expected_fields(tmp_path: Path) -> None:
 
     assert manifest["data_pack_id"] == "gip_demo_2026_05_17"
     assert manifest["row_counts"]["stg.source_games"] == 3
+    assert manifest["row_counts"]["raw.rawg_game_details"] == 4
+    assert manifest["api_calls_by_source"]["rawg"] == 2
+    assert "checksums" in manifest
     assert "secret" not in str(manifest).lower()
     assert manifest_path.exists()

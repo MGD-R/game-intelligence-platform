@@ -14,8 +14,10 @@ from src.utils.config import project_root
 
 RAW_TABLE_EXPORTS = {
     "raw.rawg_game_index": "rawg_game_index.jsonl.gz",
+    "raw.rawg_game_details": "rawg_game_details.jsonl.gz",
     "raw.rawg_reference_data": "rawg_reference_data.jsonl.gz",
     "raw.wikidata_sparql_results": "wikidata_sparql_results.jsonl.gz",
+    "raw.wikidata_entities": "wikidata_entities.jsonl.gz",
     "raw.steam_app_details": "steam_app_details.jsonl.gz",
     "raw.wikipedia_pages": "wikipedia_pages.jsonl.gz",
     "raw.igdb_games": "igdb_games.jsonl.gz",
@@ -53,10 +55,18 @@ def checksum_for_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def build_checksums_map(root: Path, paths: list[Path]) -> dict[str, str]:
+    return {
+        path.relative_to(root).as_posix(): checksum_for_file(path)
+        for path in sorted(paths)
+        if path.exists()
+    }
+
+
 def write_checksums(root: Path, paths: list[Path]) -> Path:
     checksum_path = root / "checksums.sha256"
     lines = [
-        f"{checksum_for_file(path)}  {path.relative_to(root).as_posix()}" for path in sorted(paths)
+        f"{digest}  {relative}" for relative, digest in build_checksums_map(root, paths).items()
     ]
     checksum_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
     return checksum_path
@@ -69,14 +79,19 @@ def build_data_pack_manifest(
     pack_root: Path,
     sources: list[str],
     warnings: list[str] | None = None,
+    checksums: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    row_counts = {
-        "raw.rawg_game_index": repository.count_rows("raw.rawg_game_index"),
-        "stg.source_games": repository.count_rows("stg.source_games"),
-        "ml.entity_candidate_pairs": repository.count_rows("ml.entity_candidate_pairs"),
-    }
+    row_counts = {table_name: repository.count_rows(table_name) for table_name in RAW_TABLE_EXPORTS}
+    row_counts.update(
+        {
+            "stg.source_games": repository.count_rows("stg.source_games"),
+            "stg.source_game_external_ids": repository.count_rows("stg.source_game_external_ids"),
+            "ml.entity_candidate_pairs": repository.count_rows("ml.entity_candidate_pairs"),
+        }
+    )
     api_calls_by_source = {
-        source_name: 0 for source_name in ("rawg", "wikidata", "steam", "wikipedia", "igdb")
+        source_name: repository.count_api_requests(source_name)
+        for source_name in ("rawg", "wikidata", "steam", "wikipedia", "igdb")
     }
     return {
         "data_pack_id": data_pack_id,
@@ -90,6 +105,7 @@ def build_data_pack_manifest(
         "processed_root": "processed",
         "reports_root": "reports",
         "warnings": warnings or [],
+        "checksums": checksums or {},
         "pack_root": str(pack_root),
     }
 
