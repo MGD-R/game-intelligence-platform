@@ -48,6 +48,23 @@ def _source_has_rows(repository: IngestionRepository, source_name: str) -> bool:
     return (raw_row_count + staging_row_count) > 0
 
 
+def _path_exists(root: Path, *parts: str) -> bool:
+    return root.joinpath(*parts).exists()
+
+
+def _wikidata_rawg_external_id_count(repository: IngestionRepository) -> int:
+    fetch_rows = getattr(repository, "fetch_staging_rows", None)
+    if fetch_rows is None:
+        return 0
+    return len(
+        [
+            row
+            for row in fetch_rows("stg.source_game_external_ids", source="wikidata")
+            if str(row.get("external_source") or "") == "rawg"
+        ]
+    )
+
+
 def git_value(*args: str) -> str | None:
     try:
         output = subprocess.check_output(["git", *args], cwd=project_root(), text=True)
@@ -96,6 +113,7 @@ def build_data_pack_manifest(
             "stg.source_games": repository.count_rows("stg.source_games"),
             "stg.source_game_external_ids": repository.count_rows("stg.source_game_external_ids"),
             "ml.entity_candidate_pairs": repository.count_rows("ml.entity_candidate_pairs"),
+            "ml.entity_resolution_features": repository.count_rows("ml.entity_resolution_features"),
         }
     )
     api_calls_by_source = {
@@ -117,6 +135,34 @@ def build_data_pack_manifest(
         and source_name not in active_sources
         and source_name not in checked_sources
     ]
+    rawg_game_count = repository.count_rows("stg.source_games", source="rawg")
+    wikidata_game_count = repository.count_rows("stg.source_games", source="wikidata")
+    wikidata_rawg_external_id_count = _wikidata_rawg_external_id_count(repository)
+    processed_exports_ready = all(
+        _path_exists(pack_root, "processed", name) for name in PROCESSED_EXPORTS
+    )
+    report_exports_ready = all(_path_exists(pack_root, "reports", name) for name in REPORT_EXPORTS)
+    step_status = {
+        "rawg_raw": (
+            row_counts["raw.rawg_game_index"] > 0 and row_counts["raw.rawg_reference_data"] > 0
+        ),
+        "wikidata_raw": row_counts["raw.wikidata_sparql_results"] > 0,
+        "rawg_staging": rawg_game_count > 0,
+        "wikidata_staging": wikidata_game_count > 0,
+        "external_id_matching": wikidata_rawg_external_id_count > 0,
+        "candidate_pairs": row_counts["ml.entity_candidate_pairs"] > 0,
+        "feature_base": row_counts["ml.entity_resolution_features"] > 0,
+        "dq_reports": report_exports_ready,
+        "ml_ready_exports": processed_exports_ready,
+    }
+    completed_steps = [name for name, ok in step_status.items() if ok]
+    failed_steps = [name for name, ok in step_status.items() if not ok]
+    if not completed_steps:
+        run_status = "failed"
+    elif failed_steps:
+        run_status = "partial"
+    else:
+        run_status = "completed"
     return {
         "data_pack_id": data_pack_id,
         "created_at": datetime.now(UTC).isoformat(),
@@ -134,6 +180,14 @@ def build_data_pack_manifest(
         "warnings": warnings or [],
         "checksums": checksums or {},
         "pack_root": str(pack_root),
+        "run_status": run_status,
+        "ml_ready": (
+            step_status["candidate_pairs"]
+            and step_status["feature_base"]
+            and step_status["ml_ready_exports"]
+        ),
+        "completed_steps": completed_steps,
+        "failed_steps": failed_steps,
     }
 
 

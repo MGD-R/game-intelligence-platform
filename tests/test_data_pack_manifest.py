@@ -50,6 +50,10 @@ def test_data_pack_manifest_has_expected_fields(tmp_path: Path) -> None:
     assert manifest["active_sources"] == ["rawg", "wikidata"]
     assert manifest["checked_sources"] == []
     assert manifest["optional_sources"] == []
+    assert manifest["run_status"] in {"completed", "partial", "failed"}
+    assert "ml_ready" in manifest
+    assert "completed_steps" in manifest
+    assert "failed_steps" in manifest
     assert "checksums" in manifest
     assert "secret" not in str(manifest).lower()
     assert manifest_path.exists()

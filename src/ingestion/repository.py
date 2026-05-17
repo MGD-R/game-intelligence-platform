@@ -45,6 +45,16 @@ def redacted_database_dsn() -> str:
     return redact_dsn(resolve_database_dsn())
 
 
+def _adapt_staging_value(value: object) -> object:
+    from psycopg.types.json import Jsonb
+
+    if isinstance(value, dict):
+        return Jsonb(value)
+    if isinstance(value, list):
+        return Jsonb(value)
+    return value
+
+
 class IngestionRepository:
     def __init__(self, dsn: str | None = None, connect_timeout: int | None = None) -> None:
         self.dsn = dsn or resolve_database_dsn()
@@ -862,5 +872,8 @@ class IngestionRepository:
                 )
                 cursor.executemany(
                     insert_query,
-                    [tuple(row[column] for column in columns) for row in rows],
+                    [
+                        tuple(_adapt_staging_value(row[column]) for column in columns)
+                        for row in rows
+                    ],
                 )

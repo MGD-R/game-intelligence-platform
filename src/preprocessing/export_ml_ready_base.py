@@ -20,6 +20,10 @@ from src.utils.config import project_root
 def _normalize_value(value: Any) -> Any:
     if isinstance(value, UUID):
         return str(value)
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
     if isinstance(value, dict):
         return json.dumps(value, sort_keys=True, ensure_ascii=True)
     if isinstance(value, list):
@@ -46,6 +50,44 @@ def _normalize_value_for_dtype(value: Any, dtype: pl.DataType) -> Any:
     return normalized
 
 
+def _normalized_type_family(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    if isinstance(value, str):
+        return "str"
+    return "other"
+
+
+def _normalize_rows_without_schema(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    normalized_rows = [{key: _normalize_value(value) for key, value in row.items()} for row in rows]
+    keys = sorted({key for row in normalized_rows for key in row})
+    heterogeneous_keys: set[str] = set()
+    for key in keys:
+        families = {
+            family
+            for row in normalized_rows
+            if (family := _normalized_type_family(row.get(key))) is not None
+        }
+        if len(families) > 1:
+            heterogeneous_keys.add(key)
+    if not heterogeneous_keys:
+        return normalized_rows
+    for row in normalized_rows:
+        for key in keys:
+            row.setdefault(key, None)
+        for key in heterogeneous_keys:
+            value = row.get(key)
+            if value is not None:
+                row[key] = str(value)
+    return normalized_rows
+
+
 def write_parquet(
     path: Path,
     rows: list[dict[str, object]],
@@ -63,10 +105,11 @@ def write_parquet(
                 for row in rows
             ]
         else:
-            normalized_rows = [
-                {key: _normalize_value(value) for key, value in row.items()} for row in rows
-            ]
-        frame = pl.DataFrame(normalized_rows, schema=schema)
+            normalized_rows = _normalize_rows_without_schema(rows)
+        if schema:
+            frame = pl.DataFrame(normalized_rows, schema=schema)
+        else:
+            frame = pl.DataFrame(normalized_rows, infer_schema_length=None)
     elif schema:
         frame = pl.DataFrame(schema=schema)
     else:

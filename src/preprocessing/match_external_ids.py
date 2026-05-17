@@ -15,17 +15,24 @@ def find_external_id_matches(
     source_a: str = "rawg",
     source_b: str = "wikidata",
 ) -> list[dict[str, object]]:
-    rawg_records = {key[1]: record for key, record in records.items() if key[0] == source_a}
+    rawg_records: dict[str, SourceGameRecord] = {}
+    for key, record in records.items():
+        if key[0] != source_a:
+            continue
+        rawg_records[key[1]] = record
+        if rawg_key := record.external_ids.get(source_a):
+            rawg_records[rawg_key] = record
     wikidata_records = [record for key, record in records.items() if key[0] == source_b]
     matches: list[dict[str, object]] = []
     for wikidata_record in wikidata_records:
         rawg_id = wikidata_record.external_ids.get("rawg")
         if not rawg_id or rawg_id not in rawg_records:
             continue
+        rawg_record = rawg_records[rawg_id]
         matches.append(
             {
                 "source_a": source_a,
-                "source_id_a": rawg_id,
+                "source_id_a": rawg_record.source_game_id,
                 "source_b": source_b,
                 "source_id_b": wikidata_record.source_game_id,
                 "candidate_source": "external_id",
@@ -57,7 +64,10 @@ def main(argv: list[str] | None = None) -> int:
         preview = {
             "source_a": args.source_a,
             "source_b": args.source_b,
-            "rule": "RAWG source_game_id == Wikidata external_id where external_source='rawg'",
+            "rule": (
+                "RAWG source_game_id or slug == "
+                "Wikidata external_id where external_source='rawg'"
+            ),
             "writes_to": "ml.entity_candidate_pairs",
         }
         print(preview)

@@ -72,4 +72,6 @@ def test_export_data_pack_writes_jsonl_and_checksums(tmp_path: Path, monkeypatch
     assert manifest["active_sources"] == ["rawg", "wikidata"]
     assert manifest["checked_sources"] == ["steam"]
     assert manifest["optional_sources"] == ["wikipedia", "igdb"]
+    assert manifest["run_status"] in {"completed", "partial", "failed"}
+    assert "ml_ready" in manifest
     assert (output_dir / "checksums.sha256").exists()

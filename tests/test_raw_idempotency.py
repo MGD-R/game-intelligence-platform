@@ -11,6 +11,8 @@ class _Cursor:
     def __init__(self) -> None:
         self.query = None
         self.params = None
+        self.executemany_query = None
+        self.executemany_params = None
 
     def __enter__(self) -> "_Cursor":
         return self
@@ -21,6 +23,10 @@ class _Cursor:
     def execute(self, query, params) -> None:  # type: ignore[no-untyped-def]
         self.query = str(query)
         self.params = params
+
+    def executemany(self, query, params_seq) -> None:  # type: ignore[no-untyped-def]
+        self.executemany_query = str(query)
+        self.executemany_params = list(params_seq)
 
 
 class _Connection:
@@ -83,6 +89,33 @@ def test_import_raw_record_maps_optional_fields(monkeypatch) -> None:  # type: i
     assert captured["table_name"] == "raw.igdb_reference_data"
     assert captured["from_cache"] is True
     assert captured["response_hash"] is None
+
+
+def test_replace_source_staging_rows_adapts_json_values(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    cursor = _Cursor()
+    repository = IngestionRepository(dsn="postgresql://stub")
+    monkeypatch.setattr(repository, "connection", lambda: _Connection(cursor))
+
+    repository.replace_source_staging_rows(
+        source="rawg",
+        table_name="stg.source_games",
+        rows=[
+            {
+                "source": "rawg",
+                "source_game_id": "1",
+                "name": "Game",
+                "quality_flags_json": {"has_details": True},
+                "source_specific_json": ["a", "b"],
+            }
+        ],
+        key_columns=["source", "source_game_id"],
+    )
+
+    assert "DELETE FROM" in cursor.query
+    assert "INSERT INTO" in cursor.executemany_query
+    inserted_row = cursor.executemany_params[0]
+    assert inserted_row[3].__class__.__name__ == "Jsonb"
+    assert inserted_row[4].__class__.__name__ == "Jsonb"
 
 
 def test_insert_raw_record_is_idempotent_in_postgres() -> None:

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
+from src.ingestion.base_client import HTTPStatusError
 from src.ingestion.cli import build_common_parser
 from src.ingestion.jobs.select_wikipedia_pages import (
     default_limit,
@@ -18,6 +20,14 @@ from src.ingestion.wikipedia_client import WikipediaClient
 
 def default_page_limit() -> int:
     return int(os.getenv("WIKIPEDIA_PAGE_LIMIT", default_limit()))
+
+
+def default_retry_limit() -> int:
+    return int(os.getenv("WIKIPEDIA_429_RETRY_LIMIT", "5"))
+
+
+def default_retry_backoff_seconds() -> int:
+    return int(os.getenv("WIKIPEDIA_429_BACKOFF_SECONDS", "60"))
 
 
 def parse_pages_file(path: str) -> list[dict[str, str]]:
@@ -68,6 +78,32 @@ def build_wrapped_response(
     }
 
 
+def load_page_with_backoff(
+    client: WikipediaClient,
+    page: dict[str, str],
+    *,
+    force_refresh: bool,
+    from_cache_only: bool,
+    retry_limit: int,
+    retry_backoff_seconds: int,
+):
+    attempts = 0
+    while True:
+        try:
+            return client.get_page_summary(
+                page["language"],
+                page["title"],
+                dry_run=False,
+                force_refresh=force_refresh,
+                from_cache_only=from_cache_only,
+            )
+        except HTTPStatusError as exc:
+            if exc.status_code != 429 or attempts >= retry_limit:
+                raise
+            attempts += 1
+            time.sleep(retry_backoff_seconds)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_common_parser("Load targeted Wikipedia summary pages.")
     parser.add_argument("--pages-file", help="JSONL file created by select_wikipedia_pages.")
@@ -76,6 +112,18 @@ def main(argv: list[str] | None = None) -> int:
         "--language",
         choices=("ru", "en"),
         help="Language for explicit --title mode.",
+    )
+    parser.add_argument(
+        "--retry-limit",
+        type=int,
+        default=default_retry_limit(),
+        help="How many page-level retries to allow after HTTP 429.",
+    )
+    parser.add_argument(
+        "--retry-backoff-seconds",
+        type=int,
+        default=default_retry_backoff_seconds(),
+        help="How long to wait before retrying the same page after HTTP 429.",
     )
     parser.set_defaults(limit=default_page_limit())
     args = parser.parse_args(argv)
@@ -135,12 +183,13 @@ def main(argv: list[str] | None = None) -> int:
         pages = pages[: max(1, args.limit)]
 
         for page in pages:
-            response = client.get_page_summary(
-                page["language"],
-                page["title"],
-                dry_run=False,
+            response = load_page_with_backoff(
+                client,
+                page,
                 force_refresh=args.force_refresh,
                 from_cache_only=args.from_cache_only,
+                retry_limit=max(0, args.retry_limit),
+                retry_backoff_seconds=max(1, args.retry_backoff_seconds),
             )
             if client.repository is None:
                 raise RuntimeError("Database repository is unavailable for Wikipedia page load")
