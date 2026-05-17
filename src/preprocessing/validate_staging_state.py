@@ -70,7 +70,8 @@ def validation_error_message(validation: StagingStateValidation) -> str:
     if validation.empty_tables:
         parts.append("empty required inputs: " + ", ".join(validation.empty_tables))
     follow_up = (
-        "Run prerequisites first: `make rawg-demo`, `make wikidata-demo`, "
+        "Run prerequisites first: `make rawg-demo`, `make wikidata-by-rawg`, "
+        "`make wikidata-staging`, "
         "then `make entity-data-base`."
     )
     return "; ".join(parts + [follow_up])

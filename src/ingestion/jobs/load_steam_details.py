@@ -85,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         if not appids:
             raise RuntimeError(
                 "No Steam AppIDs found for targeted enrichment. "
-                "Run `make wikidata-demo` and `make staging` first."
+                "Run `make wikidata-by-rawg`, `make wikidata-staging`, and `make staging` first."
             )
 
         for appid in appids:

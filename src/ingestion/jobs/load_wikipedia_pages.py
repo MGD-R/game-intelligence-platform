@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         if not pages:
             raise RuntimeError(
                 "No Wikipedia sitelinks found for targeted summaries. "
-                "Run `make wikidata-demo` and `make staging` first."
+                "Run `make wikidata-by-rawg`, `make wikidata-staging`, and `make staging` first."
             )
         pages = pages[: max(1, args.limit)]
 

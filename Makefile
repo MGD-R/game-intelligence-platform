@@ -5,7 +5,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 .PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
 	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
-	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
+	wikidata-check wikidata-by-rawg wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata full-data-plan \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
 	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
@@ -114,6 +114,10 @@ wikidata:
 wikidata-check:
 	$(WORKER_RUN) python -m src.ingestion.wikidata_client --check --dry-run --limit 1
 
+wikidata-by-rawg:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_by_rawg_ids
+
 wikidata-identity:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikidata_identity
@@ -126,7 +130,7 @@ wikidata-staging:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.wikidata_to_staging
 
-wikidata-demo: wikidata-identity wikidata-staging
+wikidata-demo: wikidata-by-rawg wikidata-staging
 
 match-external-ids:
 	$(COMPOSE) up -d postgres
@@ -297,13 +301,35 @@ rag:
 
 demo-data:
 	$(MAKE) rawg-demo
-	$(MAKE) wikidata-demo
+	$(MAKE) wikidata-by-rawg
+	$(MAKE) wikidata-staging
 	$(MAKE) match-external-ids
 	$(MAKE) candidate-pairs
 	$(MAKE) feature-base
+	$(MAKE) anomalies
+	$(MAKE) export-analysis
 	$(MAKE) dq
 	$(MAKE) ml-ready-data
 	$(MAKE) export-data-pack
+
+full-data-plan:
+	@printf '%s\n' \
+		'Controlled full download order:' \
+		'1. make check-sources-network' \
+		'2. make rawg-reference' \
+		'3. make rawg-index' \
+		'4. make rawg-details' \
+		'5. make rawg-staging' \
+		'6. make wikidata-by-rawg' \
+		'7. make wikidata-staging' \
+		'8. make match-external-ids' \
+		'9. make candidate-pairs' \
+		'10. make feature-base' \
+		'11. make dq' \
+		'12. make anomalies' \
+		'13. make export-analysis' \
+		'14. make ml-ready-data' \
+		'15. make export-data-pack'
 
 export-data-pack:
 	$(COMPOSE) up -d postgres
