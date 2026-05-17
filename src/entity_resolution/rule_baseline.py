@@ -92,8 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output-path",
         default=str(
-            resolve_entity_resolution_paths().predictions_dir
-            / "rule_baseline_predictions.parquet"
+            resolve_entity_resolution_paths().predictions_dir / "rule_baseline_predictions.parquet"
         ),
     )
     return parser

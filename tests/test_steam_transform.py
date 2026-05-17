@@ -25,6 +25,5 @@ def test_steam_fixture_maps_to_staging_rows() -> None:
     assert any(row["company_role"] == "developer" for row in bundle.source_game_companies)
     assert any(row["rating_type"] == "steam_metacritic" for row in bundle.source_game_ratings)
     assert any(
-        row["metric_name"] == "recommendations_total"
-        for row in bundle.source_game_popularity
+        row["metric_name"] == "recommendations_total" for row in bundle.source_game_popularity
     )

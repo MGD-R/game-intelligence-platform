@@ -45,9 +45,8 @@ def build_training_frame(
                 pl.col("release_year").alias("release_year_b"),
             ]
         )
-        joined = (
-            joined.join(left_context, on=["source_a", "source_id_a"], how="left")
-            .join(right_context, on=["source_b", "source_id_b"], how="left")
+        joined = joined.join(left_context, on=["source_a", "source_id_a"], how="left").join(
+            right_context, on=["source_b", "source_id_b"], how="left"
         )
 
     config = load_entity_resolution_config()

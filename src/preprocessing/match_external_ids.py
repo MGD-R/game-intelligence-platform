@@ -15,12 +15,8 @@ def find_external_id_matches(
     source_a: str = "rawg",
     source_b: str = "wikidata",
 ) -> list[dict[str, object]]:
-    rawg_records = {
-        key[1]: record for key, record in records.items() if key[0] == source_a
-    }
-    wikidata_records = [
-        record for key, record in records.items() if key[0] == source_b
-    ]
+    rawg_records = {key[1]: record for key, record in records.items() if key[0] == source_a}
+    wikidata_records = [record for key, record in records.items() if key[0] == source_b]
     matches: list[dict[str, object]] = []
     for wikidata_record in wikidata_records:
         rawg_id = wikidata_record.external_ids.get("rawg")

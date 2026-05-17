@@ -26,12 +26,9 @@ CANDIDATE_SOURCES = (
 
 def summarize_candidate_pairs(pairs: list[dict[str, object]]) -> dict[str, object]:
     count_by_source = Counter(str(pair.get("candidate_source") or "unknown") for pair in pairs)
-    positive_weak_label_count = sum(
-        str(pair.get("label_value") or "") == "1" for pair in pairs
-    )
+    positive_weak_label_count = sum(str(pair.get("label_value") or "") == "1" for pair in pairs)
     manual_review_candidate_count = sum(
-        pair.get("label_value") is None and (pair.get("confidence") or 0) >= 0.7
-        for pair in pairs
+        pair.get("label_value") is None and (pair.get("confidence") or 0) >= 0.7 for pair in pairs
     )
     return {
         "candidate_pair_count": len(pairs),

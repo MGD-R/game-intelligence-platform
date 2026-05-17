@@ -136,9 +136,7 @@ def test_load_rawg_details_dry_run(monkeypatch, capsys, tmp_path) -> None:
     monkeypatch.setattr(load_rawg_details, "RawgClient", FakeRawgClient)
     monkeypatch.setattr(load_rawg_details, "PipelineRunLogger", lambda **_: logger)
 
-    exit_code = load_rawg_details.main(
-        ["--dry-run", "--ids-file", str(ids_file), "--limit", "1"]
-    )
+    exit_code = load_rawg_details.main(["--dry-run", "--ids-file", str(ids_file), "--limit", "1"])
 
     assert exit_code == 0
     assert logger.finished == {

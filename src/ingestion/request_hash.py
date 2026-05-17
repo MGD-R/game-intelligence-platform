@@ -57,6 +57,7 @@ def build_request_hash(
     method: str,
     params: Mapping[str, object] | None = None,
     json_body: Mapping[str, object] | None = None,
+    raw_body: str | None = None,
 ) -> str:
     canonical_payload = {
         "source": source.lower(),
@@ -64,5 +65,6 @@ def build_request_hash(
         "method": method.upper(),
         "params": normalize_mapping(params),
         "json_body": normalize_mapping(json_body),
+        "raw_body": raw_body or "",
     }
     return hashlib.sha256(stable_json_dumps(canonical_payload).encode("utf-8")).hexdigest()

@@ -7,12 +7,16 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
+	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
 	validate-staging validate-ml-data manual-review-seed dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-review-queue \
-	er-baseline recommendations rag demo-data all
+	er-baseline export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
+	recommendations rag demo-data all
+
+DATA_PACK ?= data_packs/gip_demo_local
 
 build:
 	$(COMPOSE) build app worker
@@ -65,16 +69,16 @@ format:
 	$(WORKER_RUN) python -m ruff format src tests
 
 check-sources:
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.check_sources --no-network
+	$(WORKER_RUN) python -m src.ingestion.check_sources --no-network
 
 check-sources-network:
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.check_sources --network --limit 1
+	$(WORKER_RUN) python -m src.ingestion.check_sources --network --limit 1
 
 cache-list:
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.request_cache --list
+	$(WORKER_RUN) python -m src.ingestion.request_cache --list
 
 quota-status:
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.quota --status
+	$(WORKER_RUN) python -m src.ingestion.quota --status
 
 rawg:
 	$(MAKE) rawg-demo
@@ -122,23 +126,23 @@ wikidata-demo: wikidata-identity wikidata-staging
 
 match-external-ids:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.match_external_ids
+	$(WORKER_RUN) python -m src.preprocessing.match_external_ids
 
 candidate-pairs:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_candidate_pairs
+	$(WORKER_RUN) python -m src.entity_resolution.build_candidate_pairs
 
 feature-base:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_feature_base
+	$(WORKER_RUN) python -m src.entity_resolution.build_feature_base
 
 source-coverage:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.source_coverage
+	$(WORKER_RUN) python -m src.preprocessing.source_coverage
 
 export-ml-base:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_ml_ready_base
+	$(WORKER_RUN) python -m src.preprocessing.export_ml_ready_base
 
 entity-data-base: match-external-ids candidate-pairs feature-base source-coverage export-ml-base
 
@@ -150,17 +154,41 @@ steam-check:
 
 steam-appids:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.select_steam_appids
+	$(WORKER_RUN) python -m src.ingestion.jobs.select_steam_appids
 
 steam-details:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.load_steam_details
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_steam_details
 
 steam-staging:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.steam_to_staging
+	$(WORKER_RUN) python -m src.preprocessing.steam_to_staging
 
 steam-demo: steam-appids steam-details steam-staging
+
+igdb:
+	$(MAKE) igdb-demo
+
+igdb-check:
+	$(WORKER_RUN) python -m src.ingestion.igdb_client --check --dry-run
+
+igdb-ids:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.select_igdb_ids
+
+igdb-reference:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_igdb_reference
+
+igdb-games:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_igdb_games
+
+igdb-staging:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.igdb_to_staging
+
+igdb-demo: igdb-ids igdb-games igdb-staging
 
 wikipedia:
 	$(MAKE) wikipedia-demo
@@ -170,57 +198,57 @@ wikipedia-check:
 
 wikipedia-pages:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.select_wikipedia_pages
+	$(WORKER_RUN) python -m src.ingestion.jobs.select_wikipedia_pages
 
 wikipedia-load:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.ingestion.jobs.load_wikipedia_pages
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_wikipedia_pages
 
 wikipedia-staging:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.wikipedia_to_staging
+	$(WORKER_RUN) python -m src.preprocessing.wikipedia_to_staging
 
 wikipedia-demo: wikipedia-pages wikipedia-load wikipedia-staging
 
 validate-staging:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.validate_staging_state
+	$(WORKER_RUN) python -m src.preprocessing.validate_staging_state
 
 staging:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.build_staging --all
+	$(WORKER_RUN) python -m src.preprocessing.build_staging --all
 
 dq:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.data_quality
+	$(WORKER_RUN) python -m src.preprocessing.data_quality
 
 anomalies:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.anomaly_reports
+	$(WORKER_RUN) python -m src.preprocessing.anomaly_reports
 
 export-analysis:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_analysis_data
+	$(WORKER_RUN) python -m src.preprocessing.export_analysis_data
 
 validate-ml-data:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.validate_ml_ready_data
+	$(WORKER_RUN) python -m src.preprocessing.validate_ml_ready_data
 
 manual-review-seed:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_manual_review_seed
+	$(WORKER_RUN) python -m src.entity_resolution.build_manual_review_seed
 
 dataset-manifest:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.build_dataset_manifest
+	$(WORKER_RUN) python -m src.preprocessing.build_dataset_manifest
 
 export-ml-ready:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.export_ml_ready_datasets
+	$(WORKER_RUN) python -m src.preprocessing.export_ml_ready_datasets
 
 ml-ready-data:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.preprocessing.build_ml_ready_datasets
+	$(WORKER_RUN) python -m src.preprocessing.build_ml_ready_datasets
 
 data-stage: validate-ml-data staging match-external-ids candidate-pairs feature-base dq anomalies export-analysis manual-review-seed export-ml-ready dataset-manifest
 
@@ -231,31 +259,31 @@ er:
 
 er-dataset:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_training_dataset
+	$(WORKER_RUN) python -m src.entity_resolution.build_training_dataset
 
 er-rule-baseline:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.rule_baseline
+	$(WORKER_RUN) python -m src.entity_resolution.rule_baseline
 
 er-train:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.train_baseline_model
+	$(WORKER_RUN) python -m src.entity_resolution.train_baseline_model
 
 er-predict:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.predict_matches
+	$(WORKER_RUN) python -m src.entity_resolution.predict_matches
 
 er-evaluate:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.evaluate_model
+	$(WORKER_RUN) python -m src.entity_resolution.evaluate_model
 
 er-review-queue:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.build_manual_review_queue
+	$(WORKER_RUN) python -m src.entity_resolution.build_manual_review_queue
 
 er-baseline:
 	$(COMPOSE) up -d postgres
-	$(COMPOSE) run --rm --no-deps worker python -m src.entity_resolution.run_baseline_pipeline
+	$(WORKER_RUN) python -m src.entity_resolution.run_baseline_pipeline
 
 recommendations:
 	$(WORKER_RUN) python -m src.recommendations.build_recommendations
@@ -264,7 +292,33 @@ rag:
 	$(WORKER_RUN) python -m src.rag.build_index
 
 demo-data:
-	$(WORKER_RUN) python -m src.preprocessing.build_staging --demo
+	$(MAKE) rawg-demo
+	$(MAKE) wikidata-demo
+	$(MAKE) match-external-ids
+	$(MAKE) candidate-pairs
+	$(MAKE) feature-base
+	$(MAKE) dq
+	$(MAKE) ml-ready-data
+
+export-data-pack:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.export_data_pack --output data_packs/gip_demo_local --include-cache --include-processed --include-reports
+
+import-data-pack:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.import_data_pack --input $(DATA_PACK)
+
+restore-from-files:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.restore_from_files --input $(DATA_PACK)
+
+export-raw-cache:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.export_data_pack --output data_packs/gip_raw_cache_local --include-cache
+
+data-pack-check:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.export_data_pack --output $(DATA_PACK) --dry-run
 
 all:
 	$(MAKE) check-sources

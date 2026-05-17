@@ -58,8 +58,7 @@ class RawgClient(BaseAPIClient):
     ) -> IngestionResponse:
         params: dict[str, object] = {
             "page": page,
-            "page_size": page_size
-            or int(self.source_settings.get("default_page_size", 40)),
+            "page_size": page_size or int(self.source_settings.get("default_page_size", 40)),
             "key": self.api_key(required=not dry_run),
         }
         if ordering:
@@ -121,8 +120,7 @@ class RawgClient(BaseAPIClient):
             "GET",
             endpoint,
             params={
-                "page_size": page_size
-                or int(self.source_settings.get("default_page_size", 40)),
+                "page_size": page_size or int(self.source_settings.get("default_page_size", 40)),
                 "key": self.api_key(required=not dry_run),
             },
             dry_run=dry_run,

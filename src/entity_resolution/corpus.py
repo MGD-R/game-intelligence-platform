@@ -43,6 +43,7 @@ class SourceGameRecord:
     alias_languages: dict[str, set[str]] = field(default_factory=dict)
     external_ids: dict[str, str] = field(default_factory=dict)
     genres: set[str] = field(default_factory=set)
+    themes: set[str] = field(default_factory=set)
     platforms: set[str] = field(default_factory=set)
     tags: set[str] = field(default_factory=set)
     developers: set[str] = field(default_factory=set)
@@ -110,6 +111,14 @@ def load_source_records(repository: IngestionRepository) -> dict[tuple[str, str]
             normalized = normalize_text(str(row["genre_name"]))
             if normalized:
                 record.genres.add(normalized)
+
+    for row in repository.fetch_staging_rows("stg.source_game_themes"):
+        key = (str(row["source"]), str(row["source_game_id"]))
+        record = records.get(key)
+        if record is not None:
+            normalized = normalize_text(str(row["theme_name"]))
+            if normalized:
+                record.themes.add(normalized)
 
     for row in repository.fetch_staging_rows("stg.source_game_platforms"):
         key = (str(row["source"]), str(row["source_game_id"]))

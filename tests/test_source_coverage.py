@@ -67,7 +67,7 @@ def test_coverage_metrics_are_calculated() -> None:
                 "description_type": "summary",
                 "language": "ru",
                 "description_text": "Краткая справка.",
-            }
+            },
         ],
         rating_rows=[
             {

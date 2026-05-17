@@ -79,12 +79,18 @@ class BaseAPIClient:
     ) -> dict[str, object] | None:
         return dict(json_body) if json_body else None
 
+    def build_raw_body(self, raw_body: str | None = None) -> str | None:
+        if raw_body is None:
+            return None
+        return str(raw_body)
+
     def request(
         self,
         method: str,
         endpoint: str,
         params: dict[str, object] | None = None,
         json_body: dict[str, object] | None = None,
+        raw_body: str | None = None,
         headers: dict[str, str] | None = None,
         use_cache: bool = True,
         force_refresh: bool = False,
@@ -95,12 +101,14 @@ class BaseAPIClient:
         request_params = self.build_params(params)
         request_headers = self.build_headers(headers)
         request_body = self.build_json_body(json_body)
+        request_raw_body = self.build_raw_body(raw_body)
         request_hash = build_request_hash(
             source=self.source,
             endpoint=request_url,
             method=method,
             params=request_params,
             json_body=request_body,
+            raw_body=request_raw_body,
         )
         request_metadata = {
             "source": self.source,
@@ -108,7 +116,11 @@ class BaseAPIClient:
             "url": redact_url(request_url),
             "params": redact_mapping(request_params),
             "headers": redact_headers(request_headers),
-            "body": redact_mapping(request_body),
+            "body": (
+                redact_mapping(request_body)
+                if request_body is not None
+                else ({"raw_body": request_raw_body} if request_raw_body is not None else {})
+            ),
         }
 
         if dry_run:
@@ -177,6 +189,7 @@ class BaseAPIClient:
                         request_url,
                         params=request_params,
                         json=request_body,
+                        content=request_raw_body,
                         headers=request_headers,
                     ),
                     source=self.source,
@@ -203,11 +216,9 @@ class BaseAPIClient:
             payload = response.text
 
         response_hash = hashlib.sha256(
-            (
-                stable_json_dumps(payload)
-                if not isinstance(payload, str)
-                else payload
-            ).encode("utf-8")
+            (stable_json_dumps(payload) if not isinstance(payload, str) else payload).encode(
+                "utf-8"
+            )
         ).hexdigest()
         cache_payload = {
             "source": self.source,

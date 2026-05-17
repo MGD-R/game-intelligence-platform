@@ -41,6 +41,33 @@ def load_all_configs() -> dict[str, dict[str, Any]]:
     }
 
 
+def source_env_groups(settings: dict[str, Any]) -> list[list[str]]:
+    primary_envs = [
+        env_name
+        for key, env_name in settings.items()
+        if key.endswith("_env") and not key.startswith("fallback_") and isinstance(env_name, str)
+    ]
+    fallback_envs = [
+        env_name
+        for key, env_name in settings.items()
+        if key.startswith("fallback_") and key.endswith("_env") and isinstance(env_name, str)
+    ]
+
+    groups: list[list[str]] = []
+    if primary_envs:
+        groups.append(primary_envs)
+    if fallback_envs:
+        groups.append(fallback_envs)
+    return groups
+
+
+def source_is_configured(settings: dict[str, Any]) -> bool:
+    env_groups = source_env_groups(settings)
+    if not env_groups:
+        return True
+    return any(all(os.getenv(env_name) for env_name in group) for group in env_groups)
+
+
 def enabled_sources() -> dict[str, list[str]]:
     sources = load_yaml_config("sources").get("sources", {})
     enabled = [name for name, settings in sources.items() if settings.get("enabled")]
@@ -54,17 +81,7 @@ def source_configuration_status() -> dict[str, list[str]]:
     missing: list[str] = []
 
     for source_name, settings in sources.items():
-        required_envs = [
-            env_name
-            for key, env_name in settings.items()
-            if key.endswith("_env") and isinstance(env_name, str)
-        ]
-
-        if not required_envs:
-            configured.append(source_name)
-            continue
-
-        if all(os.getenv(env_name) for env_name in required_envs):
+        if source_is_configured(settings):
             configured.append(source_name)
         else:
             missing.append(source_name)

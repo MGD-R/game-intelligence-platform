@@ -24,9 +24,13 @@ Agents.md
 !/data/processed/.gitkeep
 !/data/features/.gitkeep
 !/data/artifacts/.gitkeep
+/data_packs/*
+!/data_packs/.gitkeep
 /mlruns/
 *.db
 *.sqlite
+*.jsonl.gz
+*.parquet
 
 # Python/cache
 __pycache__/

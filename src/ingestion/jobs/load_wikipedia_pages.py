@@ -85,10 +85,14 @@ def main(argv: list[str] | None = None) -> int:
         language=args.language,
         pages_file=args.pages_file,
     )
-    preview = explicit_pages[0] if explicit_pages else {
-        "language": "en",
-        "title": "Selected from Wikidata sitelinks",
-    }
+    preview = (
+        explicit_pages[0]
+        if explicit_pages
+        else {
+            "language": "en",
+            "title": "Selected from Wikidata sitelinks",
+        }
+    )
 
     if args.dry_run:
         client = WikipediaClient(repository=None)
@@ -144,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
                 table_name="raw.wikipedia_pages",
                 endpoint=response.endpoint,
                 request_hash=response.request_hash,
-                source_record_id=f'{page["language"]}:{page["title"]}',
+                source_record_id=f"{page['language']}:{page['title']}",
                 response_json=build_wrapped_response(page, response.payload),
                 response_hash=response.response_hash,
                 response_storage_path=response.cache_path,

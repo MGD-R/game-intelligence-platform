@@ -44,10 +44,7 @@ def response_language(
         if isinstance(desktop, dict):
             page_url = str(desktop.get("page") or "")
     return str(
-        selection.get("language")
-        or response.get("lang")
-        or page_url.split("//", 1)[-1][:2]
-        or "en"
+        selection.get("language") or response.get("lang") or page_url.split("//", 1)[-1][:2] or "en"
     ).strip()
 
 
@@ -79,9 +76,7 @@ def transform_wikipedia_payloads(
         source_game_id = wikipedia_source_game_id(language, title, page_id)
         extract = normalize_description_text(str(response.get("extract") or ""))
         page_url = (
-            response.get("content_urls", {})
-            .get("desktop", {})
-            .get("page")
+            response.get("content_urls", {}).get("desktop", {}).get("page")
             if isinstance(response.get("content_urls"), dict)
             else None
         )

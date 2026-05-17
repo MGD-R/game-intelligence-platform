@@ -9,15 +9,14 @@ from src.ingestion.base_client import BaseAPIClient, CacheMissError
 from src.ingestion.cli import build_common_parser
 from src.ingestion.repository import IngestionRepository, database_dsn_configured
 from src.ingestion.request_cache import ResponseCache
-from src.utils.config import load_yaml_config
+from src.utils.config import load_yaml_config, source_env_groups, source_is_configured
 
 
 def required_env_names(settings: dict[str, Any]) -> list[str]:
-    return [
-        env_name
-        for key, env_name in settings.items()
-        if key.endswith("_env") and isinstance(env_name, str)
-    ]
+    groups = source_env_groups(settings)
+    if not groups:
+        return []
+    return [", ".join(group) for group in groups]
 
 
 def build_parser():  # type: ignore[no-untyped-def]
@@ -50,7 +49,7 @@ def run_no_network_checks(source_filter: str | None = None) -> int:
             continue
         env_names = required_env_names(settings)
         enabled = bool(settings.get("enabled"))
-        configured = all(os.getenv(name) for name in env_names) if env_names else True
+        configured = source_is_configured(settings)
         print(
             f"- {source_name}: enabled={enabled}, required_envs={env_names or ['none']}, "
             f"configured={configured}"
@@ -81,7 +80,9 @@ def build_source_client(
 
 
 def rawg_check(
-    client: BaseAPIClient, settings: dict[str, Any], args  # type: ignore[no-untyped-def]
+    client: BaseAPIClient,
+    settings: dict[str, Any],
+    args,  # type: ignore[no-untyped-def]
 ) -> tuple[bool, str]:
     api_key_env = settings.get("api_key_env")
     if not isinstance(api_key_env, str) or not os.getenv(api_key_env):
@@ -100,7 +101,9 @@ def rawg_check(
 
 
 def wikidata_check(
-    client: BaseAPIClient, settings: dict[str, Any], args  # type: ignore[no-untyped-def]
+    client: BaseAPIClient,
+    settings: dict[str, Any],
+    args,  # type: ignore[no-untyped-def]
 ) -> tuple[bool, str]:
     user_agent_env = settings.get("user_agent_env")
     if not isinstance(user_agent_env, str) or not os.getenv(user_agent_env):
@@ -122,7 +125,9 @@ def wikidata_check(
 
 
 def steam_check(
-    client: BaseAPIClient, settings: dict[str, Any], args  # type: ignore[no-untyped-def]
+    client: BaseAPIClient,
+    settings: dict[str, Any],
+    args,  # type: ignore[no-untyped-def]
 ) -> tuple[bool, str]:
     response = client.request(
         "GET",
@@ -138,7 +143,9 @@ def steam_check(
 
 
 def wikipedia_check(
-    client: BaseAPIClient, settings: dict[str, Any], args  # type: ignore[no-untyped-def]
+    client: BaseAPIClient,
+    settings: dict[str, Any],
+    args,  # type: ignore[no-untyped-def]
 ) -> tuple[bool, str]:
     user_agent_env = settings.get("user_agent_env")
     if not isinstance(user_agent_env, str) or not os.getenv(user_agent_env):
@@ -156,7 +163,9 @@ def wikipedia_check(
 
 
 def igdb_check(
-    client: BaseAPIClient, settings: dict[str, Any], args  # type: ignore[no-untyped-def]
+    client: BaseAPIClient,
+    settings: dict[str, Any],
+    args,  # type: ignore[no-untyped-def]
 ) -> tuple[bool, str]:
     client_id_env = settings.get("client_id_env")
     client_secret_env = settings.get("client_secret_env")

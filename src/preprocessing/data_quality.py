@@ -33,6 +33,7 @@ def compute_data_quality_metrics(
     candidate_pairs: list[dict[str, Any]],
     *,
     source_game_rows: list[dict[str, Any]] | None = None,
+    alias_rows: list[dict[str, Any]] | None = None,
     description_rows: list[dict[str, Any]] | None = None,
     rating_rows: list[dict[str, Any]] | None = None,
     popularity_rows: list[dict[str, Any]] | None = None,
@@ -50,9 +51,7 @@ def compute_data_quality_metrics(
     for source, source_records in sorted(by_source.items()):
         total = len(source_records) or 1
         metrics = {
-            "release_date": sum(
-                record.release_year is not None for record in source_records
-            )
+            "release_date": sum(record.release_year is not None for record in source_records)
             / total,
             "description": sum(record.has_description for record in source_records) / total,
             "developer": sum(bool(record.developers) for record in source_records) / total,
@@ -159,10 +158,18 @@ def compute_data_quality_metrics(
         for (_, _), record in records.items()
         if record.source == "wikidata" and "steam" in record.external_ids
     }
-    steam_records = {
-        record.source_game_id
+    wikidata_igdb_ids = {
+        record.external_ids["igdb"]
         for (_, _), record in records.items()
-        if record.source == "steam"
+        if record.source == "wikidata" and "igdb" in record.external_ids
+    }
+    steam_records = {
+        record.source_game_id for (_, _), record in records.items() if record.source == "steam"
+    }
+    igdb_records = {
+        record.source_game_id: record
+        for (_, _), record in records.items()
+        if record.source == "igdb"
     }
     steam_source_game_rows = [
         row for row in (source_game_rows or []) if row.get("source") == "steam"
@@ -171,15 +178,12 @@ def compute_data_quality_metrics(
         row for row in (description_rows or []) if row.get("source") == "steam"
     ]
     steam_rating_rows = [row for row in (rating_rows or []) if row.get("source") == "steam"]
-    steam_popularity_rows = [
-        row for row in (popularity_rows or []) if row.get("source") == "steam"
-    ]
+    steam_popularity_rows = [row for row in (popularity_rows or []) if row.get("source") == "steam"]
     wikipedia_description_rows = [
         row for row in (description_rows or []) if row.get("source") == "wikipedia"
     ]
-    wikipedia_url_rows = [
-        row for row in (url_rows or []) if row.get("source") == "wikipedia"
-    ]
+    igdb_alias_rows = [row for row in (alias_rows or []) if row.get("source") == "igdb"]
+    wikipedia_url_rows = [row for row in (url_rows or []) if row.get("source") == "wikipedia"]
     wikipedia_page_ids = {str(row["source_game_id"]) for row in wikipedia_url_rows}
     wikipedia_summary_ids = {
         str(row["source_game_id"])
@@ -222,11 +226,15 @@ def compute_data_quality_metrics(
         for (_, _), record in records.items()
         if record.source == "wikidata"
     )
-    wikipedia_summary_coverage_rate = round(
-        len(wikipedia_summary_ids)
-        / (wikidata_ruwiki_sitelink_count + wikidata_enwiki_sitelink_count),
-        6,
-    ) if (wikidata_ruwiki_sitelink_count + wikidata_enwiki_sitelink_count) else 0.0
+    wikipedia_summary_coverage_rate = (
+        round(
+            len(wikipedia_summary_ids)
+            / (wikidata_ruwiki_sitelink_count + wikidata_enwiki_sitelink_count),
+            6,
+        )
+        if (wikidata_ruwiki_sitelink_count + wikidata_enwiki_sitelink_count)
+        else 0.0
+    )
 
     summary = {
         "record_count_by_source": record_count_by_source,
@@ -261,9 +269,7 @@ def compute_data_quality_metrics(
         ),
         "missing_platform_rate": round(
             sum(
-                row["missing_rate"]
-                for row in missingness_report
-                if row["field_name"] == "platform"
+                row["missing_rate"] for row in missingness_report if row["field_name"] == "platform"
             ),
             6,
         ),
@@ -310,7 +316,25 @@ def compute_data_quality_metrics(
         "steam_enrichment_coverage_rate": round(
             len(steam_records) / len(wikidata_steam_ids),
             6,
-        ) if wikidata_steam_ids else 0.0,
+        )
+        if wikidata_steam_ids
+        else 0.0,
+        "igdb_game_count": len(igdb_records),
+        "wikidata_igdb_id_count": len(wikidata_igdb_ids),
+        "igdb_with_themes_count": sum(bool(record.themes) for record in igdb_records.values()),
+        "igdb_with_keywords_count": sum(bool(record.tags) for record in igdb_records.values()),
+        "igdb_with_localizations_count": sum(
+            row.get("alias_type") == "igdb_localization" for row in igdb_alias_rows
+        ),
+        "igdb_with_companies_count": sum(
+            bool(record.developers or record.publishers) for record in igdb_records.values()
+        ),
+        "igdb_enrichment_coverage_rate": round(
+            len(igdb_records) / len(wikidata_igdb_ids),
+            6,
+        )
+        if wikidata_igdb_ids
+        else 0.0,
         "wikipedia_page_count": len(wikipedia_page_ids),
         "wikipedia_ru_page_count": len(wikipedia_ru_page_ids),
         "wikipedia_en_page_count": len(wikipedia_en_page_ids),
@@ -372,6 +396,7 @@ def main(argv: list[str] | None = None) -> int:
         records,
         candidate_pairs,
         source_game_rows=repository.fetch_staging_rows("stg.source_games"),
+        alias_rows=repository.fetch_staging_rows("stg.source_game_aliases"),
         description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
         rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
         popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),
