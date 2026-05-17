@@ -40,6 +40,17 @@ def build_records() -> dict[tuple[str, str], SourceGameRecord]:
             release_year=None,
             has_description=True,
         ),
+        ("igdb", "1020"): SourceGameRecord(
+            source="igdb",
+            source_game_id="1020",
+            name="Game One",
+            name_normalized="game one",
+            release_year=2013,
+            external_ids={"steam": "271590"},
+            tags={"crime"},
+            themes={"open world"},
+            developers={"Rockstar North"},
+        ),
     }
 
 
@@ -65,6 +76,14 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
                 "quality_flags_json": {"has_supported_languages": True},
             }
         ],
+        alias_rows=[
+            {
+                "source": "igdb",
+                "source_game_id": "1020",
+                "alias_type": "igdb_localization",
+                "alias": "Game One RU",
+            }
+        ],
         description_rows=[
             {
                 "source": "steam",
@@ -78,7 +97,7 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
                 "description_type": "summary",
                 "description_text": "Short wiki summary",
                 "language": "en",
-            }
+            },
         ],
         rating_rows=[
             {
@@ -112,6 +131,8 @@ def test_quality_metrics_calculate_missingness_and_conflicts() -> None:
     assert summary["candidate_pair_summary"]["external_id_positive"] == 1
     assert summary["steam_game_count"] == 1
     assert summary["steam_with_metacritic_count"] == 1
+    assert summary["igdb_game_count"] == 1
+    assert summary["igdb_with_localizations_count"] == 1
     assert summary["wikipedia_page_count"] == 1
     assert summary["wikipedia_summary_count"] == 1
     assert summary["short_wikipedia_extract_count"] == 1

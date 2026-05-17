@@ -179,6 +179,7 @@ def validate_ml_ready_state(
             records,
             repository.fetch_candidate_pairs(),
             source_game_rows=repository.fetch_staging_rows("stg.source_games"),
+            alias_rows=repository.fetch_staging_rows("stg.source_game_aliases"),
             description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
             rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
             popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),

@@ -113,8 +113,7 @@ def test_validator_fails_when_required_sources_missing(tmp_path) -> None:
 
     assert not validation.ok
     assert any(
-        "missing required staging rows for source: rawg" in error
-        for error in validation.errors
+        "missing required staging rows for source: rawg" in error for error in validation.errors
     )
 
 

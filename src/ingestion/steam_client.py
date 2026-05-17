@@ -31,9 +31,7 @@ class SteamClient(BaseAPIClient):
 
     def __post_init__(self) -> None:
         if self.source_settings:
-            self.base_url = str(
-                self.source_settings.get("store_api_base_url", self.base_url)
-            )
+            self.base_url = str(self.source_settings.get("store_api_base_url", self.base_url))
             self.web_api_base_url = str(
                 self.source_settings.get("web_api_base_url", self.web_api_base_url)
             )
@@ -43,9 +41,7 @@ class SteamClient(BaseAPIClient):
                     self.partner_api_base_url,
                 )
             )
-            self.api_key_env = str(
-                self.source_settings.get("api_key_env", self.api_key_env)
-            )
+            self.api_key_env = str(self.source_settings.get("api_key_env", self.api_key_env))
             self.default_language = str(
                 self.source_settings.get("default_language", self.default_language)
             )

@@ -12,6 +12,18 @@ from psycopg import sql
 
 from src.ingestion.redaction import redact_dsn
 
+RAW_TABLE_CONFLICT_KEYS: dict[str, list[str]] = {
+    "raw.rawg_game_index": ["source", "endpoint", "request_hash", "source_record_id"],
+    "raw.rawg_game_details": ["source", "endpoint", "request_hash"],
+    "raw.rawg_reference_data": ["source", "endpoint", "request_hash"],
+    "raw.wikidata_sparql_results": ["source", "endpoint", "request_hash"],
+    "raw.wikidata_entities": ["source", "endpoint", "request_hash", "source_record_id"],
+    "raw.steam_app_details": ["source", "endpoint", "request_hash", "source_record_id"],
+    "raw.wikipedia_pages": ["source", "endpoint", "request_hash", "source_record_id"],
+    "raw.igdb_games": ["source", "endpoint", "request_hash", "source_record_id"],
+    "raw.igdb_reference_data": ["source", "endpoint", "request_hash"],
+}
+
 
 def resolve_database_dsn() -> str:
     dsn = os.getenv("DATABASE_URL")
@@ -345,6 +357,9 @@ class IngestionRepository:
         from psycopg.types.json import Jsonb
 
         schema_name, table = table_name.split(".", maxsplit=1)
+        conflict_columns = RAW_TABLE_CONFLICT_KEYS.get(table_name)
+        if not conflict_columns:
+            raise ValueError(f"Unsupported raw table for idempotent insert: {table_name}")
         query = sql.SQL(
             """
             INSERT INTO {table} (
@@ -360,8 +375,23 @@ class IngestionRepository:
                 error_message
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT ({conflict_columns})
+            DO UPDATE
+            SET request_id = EXCLUDED.request_id,
+                response_json = EXCLUDED.response_json,
+                response_hash = EXCLUDED.response_hash,
+                response_storage_path = EXCLUDED.response_storage_path,
+                loaded_at = NOW(),
+                from_cache = EXCLUDED.from_cache,
+                http_status = EXCLUDED.http_status,
+                error_message = EXCLUDED.error_message
             """
-        ).format(table=sql.Identifier(schema_name, table))
+        ).format(
+            table=sql.Identifier(schema_name, table),
+            conflict_columns=sql.SQL(", ").join(
+                sql.Identifier(column) for column in conflict_columns
+            ),
+        )
         with self.connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -379,6 +409,32 @@ class IngestionRepository:
                         error_message,
                     ),
                 )
+
+    def import_raw_record(
+        self,
+        *,
+        table_name: str,
+        row: Mapping[str, object],
+    ) -> None:
+        self.insert_raw_record(
+            table_name=table_name,
+            endpoint=str(row.get("endpoint") or ""),
+            request_hash=str(row.get("request_hash") or ""),
+            source_record_id=(
+                str(row.get("source_record_id"))
+                if row.get("source_record_id") not in (None, "")
+                else None
+            ),
+            response_json=(
+                row.get("response_json") if isinstance(row.get("response_json"), Mapping) else {}
+            ),
+            response_hash=str(row.get("response_hash") or "") or None,
+            response_storage_path=str(row.get("response_storage_path") or "") or None,
+            from_cache=bool(row.get("from_cache")),
+            http_status=int(row["http_status"]) if row.get("http_status") is not None else None,
+            error_message=str(row.get("error_message") or "") or None,
+            request_id=str(row.get("request_id") or "") or None,
+        )
 
     def fetch_raw_rows(self, table_name: str) -> list[dict[str, Any]]:
         schema_name, table = table_name.split(".", maxsplit=1)
@@ -412,17 +468,20 @@ class IngestionRepository:
         if limit is not None:
             limit_sql = sql.SQL(" LIMIT %s")
             params.append(limit)
-        query = sql.SQL(
-            """
+        query = (
+            sql.SQL(
+                """
             SELECT *
             FROM {table}
             WHERE {where_clause}
             ORDER BY 1, 2
             """
-        ).format(
-            table=sql.Identifier(schema_name, table),
-            where_clause=sql.SQL(" AND ").join(clauses),
-        ) + limit_sql
+            ).format(
+                table=sql.Identifier(schema_name, table),
+                where_clause=sql.SQL(" AND ").join(clauses),
+            )
+            + limit_sql
+        )
         with self.connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, params)
@@ -752,7 +811,7 @@ class IngestionRepository:
         query = f"""
             SELECT *
             FROM ml.entity_resolution_predictions
-            WHERE {' AND '.join(clauses)}
+            WHERE {" AND ".join(clauses)}
             ORDER BY predicted_at DESC, prediction_id ASC
         """
         if limit is not None:

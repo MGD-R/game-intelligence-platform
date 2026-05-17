@@ -17,9 +17,7 @@ def test_transform_wikidata_payloads_builds_expected_rows() -> None:
         (read_fixture("identity_external_ids.json"), "2026-05-16T10:00:00+00:00"),
         (read_fixture("identity_labels_aliases.json"), "2026-05-16T10:05:00+00:00"),
     ]
-    entity_payloads = {
-        "Q12345": (read_fixture("entity_Q12345.json"), "2026-05-16T10:10:00+00:00")
-    }
+    entity_payloads = {"Q12345": (read_fixture("entity_Q12345.json"), "2026-05-16T10:10:00+00:00")}
 
     bundle = transform_wikidata_payloads(sparql_payloads, entity_payloads)
 

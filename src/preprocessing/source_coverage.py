@@ -20,6 +20,7 @@ def compute_coverage_metrics(
     candidate_pairs: list[dict[str, Any]],
     *,
     source_game_rows: list[dict[str, Any]] | None = None,
+    alias_rows: list[dict[str, Any]] | None = None,
     description_rows: list[dict[str, Any]] | None = None,
     rating_rows: list[dict[str, Any]] | None = None,
     popularity_rows: list[dict[str, Any]] | None = None,
@@ -28,15 +29,17 @@ def compute_coverage_metrics(
     rawg_records = [record for key, record in records.items() if key[0] == "rawg"]
     wikidata_records = [record for key, record in records.items() if key[0] == "wikidata"]
     steam_records = [record for key, record in records.items() if key[0] == "steam"]
+    igdb_records = [record for key, record in records.items() if key[0] == "igdb"]
     wikidata_rawg_ids = {
-        record.external_ids["rawg"]
-        for record in wikidata_records
-        if "rawg" in record.external_ids
+        record.external_ids["rawg"] for record in wikidata_records if "rawg" in record.external_ids
     }
     wikidata_steam_ids = {
         record.external_ids["steam"]
         for record in wikidata_records
         if "steam" in record.external_ids
+    }
+    wikidata_igdb_ids = {
+        record.external_ids["igdb"] for record in wikidata_records if "igdb" in record.external_ids
     }
     deterministic_matches = [
         pair for pair in candidate_pairs if pair.get("label_source") == "wikidata_rawg_external_id"
@@ -55,23 +58,25 @@ def compute_coverage_metrics(
     rawg_game_count = len(rawg_records)
     wikidata_game_count = len(wikidata_records)
     steam_game_count = len(steam_records)
+    igdb_game_count = len(igdb_records)
     matched_rawg_ids = {str(pair["source_id_a"]) for pair in deterministic_matches}
     matched_wikidata_ids = {str(pair["source_id_b"]) for pair in deterministic_matches}
-    rawg_wikidata_match_rate = round(
-        len(matched_rawg_ids) / rawg_game_count,
-        6,
-    ) if rawg_game_count else 0.0
+    rawg_wikidata_match_rate = (
+        round(
+            len(matched_rawg_ids) / rawg_game_count,
+            6,
+        )
+        if rawg_game_count
+        else 0.0
+    )
     source_counts = Counter(key[0] for key in records)
     steam_source_game_rows = [
         row for row in (source_game_rows or []) if row.get("source") == "steam"
     ]
-    steam_descriptions = [
-        row for row in (description_rows or []) if row.get("source") == "steam"
-    ]
+    steam_descriptions = [row for row in (description_rows or []) if row.get("source") == "steam"]
     steam_ratings = [row for row in (rating_rows or []) if row.get("source") == "steam"]
-    steam_popularity = [
-        row for row in (popularity_rows or []) if row.get("source") == "steam"
-    ]
+    steam_popularity = [row for row in (popularity_rows or []) if row.get("source") == "steam"]
+    igdb_aliases = [row for row in (alias_rows or []) if row.get("source") == "igdb"]
     wikipedia_descriptions = [
         row for row in (description_rows or []) if row.get("source") == "wikipedia"
     ]
@@ -97,10 +102,22 @@ def compute_coverage_metrics(
         for row in steam_ratings
         if row.get("rating_type") == "steam_metacritic" and row.get("rating_value") is not None
     }
-    steam_enrichment_coverage_rate = round(
-        steam_game_count / len(wikidata_steam_ids),
-        6,
-    ) if wikidata_steam_ids else 0.0
+    steam_enrichment_coverage_rate = (
+        round(
+            steam_game_count / len(wikidata_steam_ids),
+            6,
+        )
+        if wikidata_steam_ids
+        else 0.0
+    )
+    igdb_enrichment_coverage_rate = (
+        round(
+            igdb_game_count / len(wikidata_igdb_ids),
+            6,
+        )
+        if wikidata_igdb_ids
+        else 0.0
+    )
     wikipedia_page_ids = {str(row["source_game_id"]) for row in wikipedia_urls}
     wikipedia_ru_page_ids = {
         str(row["source_game_id"])
@@ -123,14 +140,17 @@ def compute_coverage_metrics(
         source_counts.get("wikipedia", 0),
         len(wikipedia_page_ids),
     )
-    wikipedia_sitelink_total = (
-        sum("ruwiki" in record.url_types for record in wikidata_records)
-        + sum("enwiki" in record.url_types for record in wikidata_records)
+    wikipedia_sitelink_total = sum(
+        "ruwiki" in record.url_types for record in wikidata_records
+    ) + sum("enwiki" in record.url_types for record in wikidata_records)
+    wikipedia_summary_coverage_rate = (
+        round(
+            len(wikipedia_summary_ids) / wikipedia_sitelink_total,
+            6,
+        )
+        if wikipedia_sitelink_total
+        else 0.0
     )
-    wikipedia_summary_coverage_rate = round(
-        len(wikipedia_summary_ids) / wikipedia_sitelink_total,
-        6,
-    ) if wikipedia_sitelink_total else 0.0
     metrics = {
         "rawg_game_count": rawg_game_count,
         "wikidata_game_count": wikidata_game_count,
@@ -149,9 +169,18 @@ def compute_coverage_metrics(
         "steam_with_recommendations_count": len(steam_with_recommendations_ids),
         "steam_with_metacritic_count": len(steam_with_metacritic_ids),
         "steam_enrichment_coverage_rate": steam_enrichment_coverage_rate,
-        "igdb_id_count_from_wikidata": sum(
-            "igdb" in record.external_ids for record in wikidata_records
+        "igdb_game_count": igdb_game_count,
+        "igdb_with_themes_count": sum(bool(record.themes) for record in igdb_records),
+        "igdb_with_keywords_count": sum(bool(record.tags) for record in igdb_records),
+        "igdb_with_localizations_count": sum(
+            row.get("alias_type") == "igdb_localization" for row in igdb_aliases
         ),
+        "igdb_with_companies_count": sum(
+            bool(record.developers or record.publishers) for record in igdb_records
+        ),
+        "wikidata_igdb_id_count": len(wikidata_igdb_ids),
+        "igdb_enrichment_coverage_rate": igdb_enrichment_coverage_rate,
+        "igdb_id_count_from_wikidata": len(wikidata_igdb_ids),
         "ruwiki_sitelink_count": sum("ruwiki" in record.url_types for record in wikidata_records),
         "enwiki_sitelink_count": sum("enwiki" in record.url_types for record in wikidata_records),
         "wikipedia_page_count": len(wikipedia_page_ids),
@@ -180,7 +209,7 @@ def compute_coverage_metrics(
         {
             "source": "wikidata",
             "external_source": "igdb",
-            "count": sum("igdb" in record.external_ids for record in wikidata_records),
+            "count": len(wikidata_igdb_ids),
         },
     ]
     return metrics, source_rows, external_id_rows, candidate_summary
@@ -235,6 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         records,
         candidate_pairs,
         source_game_rows=repository.fetch_staging_rows("stg.source_games"),
+        alias_rows=repository.fetch_staging_rows("stg.source_game_aliases"),
         description_rows=repository.fetch_staging_rows("stg.source_game_descriptions"),
         rating_rows=repository.fetch_staging_rows("stg.source_game_ratings"),
         popularity_rows=repository.fetch_staging_rows("stg.source_game_popularity"),

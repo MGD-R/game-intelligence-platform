@@ -68,5 +68,11 @@ sources:
     base_url: https://api.igdb.com/v4
     client_id_env: IGDB_CLIENT_ID
     client_secret_env: IGDB_CLIENT_SECRET
+    fallback_client_id_env: TWITCH_CLIENT_ID
+    fallback_client_secret_env: TWITCH_CLIENT_SECRET
     timeout_seconds: 10
+    requests_per_second: 4
+    max_concurrent_requests: 8
+    max_items_per_request: 500
+    demo_limit: 50
     rate_limit_per_minute: 20

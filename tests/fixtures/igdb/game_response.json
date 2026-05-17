@@ -1,0 +1,73 @@
+{
+  "id": 1020,
+  "name": "Grand Theft Auto V",
+  "slug": "grand-theft-auto-v",
+  "alternative_names": [
+    {"name": "GTA V"}
+  ],
+  "first_release_date": 1378857600,
+  "genres": [
+    {"name": "Shooter"},
+    {"name": "Adventure"}
+  ],
+  "themes": [
+    {"name": "Open world"}
+  ],
+  "keywords": [
+    {"name": "Crime"},
+    {"name": "Single-player"}
+  ],
+  "platforms": [
+    {"name": "PC"},
+    {"name": "PlayStation 5"}
+  ],
+  "involved_companies": [
+    {
+      "company": {"name": "Rockstar North"},
+      "developer": true,
+      "publisher": false,
+      "porting": false,
+      "supporting": false
+    },
+    {
+      "company": {"name": "Rockstar Games"},
+      "developer": false,
+      "publisher": true,
+      "porting": false,
+      "supporting": false
+    }
+  ],
+  "game_localizations": [
+    {"name": "Grand Theft Auto V Russian"}
+  ],
+  "summary": "Open world action game.",
+  "storyline": "Crime drama in Los Santos.",
+  "rating": 92.5,
+  "rating_count": 1000,
+  "aggregated_rating": 95.0,
+  "aggregated_rating_count": 20,
+  "total_rating": 93.0,
+  "total_rating_count": 1020,
+  "external_games": [
+    {
+      "uid": "271590",
+      "category": 1,
+      "external_game_source": {"name": "steam"}
+    }
+  ],
+  "websites": [
+    {
+      "category": 1,
+      "url": "https://www.rockstargames.com/gta-v"
+    }
+  ],
+  "collections": {"name": "Grand Theft Auto"},
+  "franchises": {"name": "Grand Theft Auto"},
+  "similar_games": [
+    {"name": "Red Dead Redemption 2"}
+  ],
+  "version_parent": null,
+  "version_title": "",
+  "game_type": 0,
+  "updated_at": 1715900000
+}

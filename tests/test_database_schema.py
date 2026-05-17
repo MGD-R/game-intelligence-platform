@@ -42,7 +42,7 @@ def test_schema_init_scripts_cover_required_schemas_and_extensions() -> None:
     for schema_name in EXPECTED_SCHEMAS:
         assert f"CREATE SCHEMA IF NOT EXISTS {schema_name};" in schema_sql
 
-    for extension_name in ('pg_trgm', 'unaccent', '"uuid-ossp"'):
+    for extension_name in ("pg_trgm", "unaccent", '"uuid-ossp"'):
         assert f"CREATE EXTENSION IF NOT EXISTS {extension_name};" in extension_sql
 
 

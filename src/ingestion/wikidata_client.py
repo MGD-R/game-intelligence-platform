@@ -49,9 +49,7 @@ class WikidataClient(BaseAPIClient):
         if value:
             return value
         if required:
-            raise RuntimeError(
-                f"Missing required Wikimedia user agent env: {self.user_agent_env}"
-            )
+            raise RuntimeError(f"Missing required Wikimedia user agent env: {self.user_agent_env}")
         return "<missing-user-agent>"
 
     def run_sparql(
