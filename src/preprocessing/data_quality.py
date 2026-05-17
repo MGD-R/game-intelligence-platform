@@ -39,6 +39,7 @@ def compute_data_quality_metrics(
     popularity_rows: list[dict[str, Any]] | None = None,
     url_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    all_records = list(records.values())
     by_source: dict[str, list[SourceGameRecord]] = defaultdict(list)
     for (source, _), record in records.items():
         by_source[source].append(record)
@@ -73,6 +74,34 @@ def compute_data_quality_metrics(
                     "missing_rate": round(1 - completeness, 6),
                 }
             )
+
+    total_records = len(all_records) or 1
+    global_missing_rates = {
+        "release_date": round(
+            1
+            - (
+                sum(record.release_year is not None for record in all_records)
+                / total_records
+            ),
+            6,
+        ),
+        "description": round(
+            1 - (sum(record.has_description for record in all_records) / total_records),
+            6,
+        ),
+        "developer": round(
+            1 - (sum(bool(record.developers) for record in all_records) / total_records),
+            6,
+        ),
+        "genre": round(
+            1 - (sum(bool(record.genres) for record in all_records) / total_records),
+            6,
+        ),
+        "platform": round(
+            1 - (sum(bool(record.platforms) for record in all_records) / total_records),
+            6,
+        ),
+    }
 
     source_overlap_count = sum(
         1
@@ -239,40 +268,11 @@ def compute_data_quality_metrics(
     summary = {
         "record_count_by_source": record_count_by_source,
         "source_overlap_count": source_overlap_count,
-        "missing_release_date_rate": round(
-            sum(
-                row["missing_rate"]
-                for row in missingness_report
-                if row["field_name"] == "release_date"
-            ),
-            6,
-        ),
-        "missing_description_rate": round(
-            sum(
-                row["missing_rate"]
-                for row in missingness_report
-                if row["field_name"] == "description"
-            ),
-            6,
-        ),
-        "missing_developer_rate": round(
-            sum(
-                row["missing_rate"]
-                for row in missingness_report
-                if row["field_name"] == "developer"
-            ),
-            6,
-        ),
-        "missing_genre_rate": round(
-            sum(row["missing_rate"] for row in missingness_report if row["field_name"] == "genre"),
-            6,
-        ),
-        "missing_platform_rate": round(
-            sum(
-                row["missing_rate"] for row in missingness_report if row["field_name"] == "platform"
-            ),
-            6,
-        ),
+        "missing_release_date_rate": global_missing_rates["release_date"],
+        "missing_description_rate": global_missing_rates["description"],
+        "missing_developer_rate": global_missing_rates["developer"],
+        "missing_genre_rate": global_missing_rates["genre"],
+        "missing_platform_rate": global_missing_rates["platform"],
         "duplicate_candidate_count": duplicate_candidate_count,
         "conflict_count_by_field": dict(Counter(row["conflict_type"] for row in conflict_report)),
         "language_coverage": dict(language_coverage),

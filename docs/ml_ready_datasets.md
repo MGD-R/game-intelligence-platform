@@ -14,7 +14,8 @@ This stage finalizes the local data-preparation contour before any model trainin
 ## Required previous stages
 
 - `make rawg-demo`
-- `make wikidata-demo`
+- `make wikidata-by-rawg`
+- `make wikidata-staging`
 - `make match-external-ids`
 - `make staging`
 - `make dq`
