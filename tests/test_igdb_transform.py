@@ -67,3 +67,13 @@ def test_extract_igdb_search_candidates_keeps_best_rank() -> None:
     assert len(rows) == 1
     assert rows[0].search_rank == 1
     assert rows[0].query_strategy == "wikidata_alias"
+
+
+def test_igdb_fixture_deduplicates_duplicate_urls() -> None:
+    payload = read_fixture("game_response.json")
+    payload["websites"] = [
+        {"category": "website", "url": "https://example.com/game"},
+        {"category": "website", "url": "https://example.com/game"},
+    ]
+    bundle = transform_igdb_payloads([(payload, "2026-01-01T00:00:00+00:00")])
+    assert len(bundle.source_game_urls) == 1

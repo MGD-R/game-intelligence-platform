@@ -97,6 +97,7 @@ def _extract_external_ids(items: object, game_id: str, now: str) -> list[dict[st
 
 def _extract_url_rows(items: object, game_id: str, now: str) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
     if not isinstance(items, list):
         return rows
     for item in items:
@@ -105,11 +106,16 @@ def _extract_url_rows(items: object, game_id: str, now: str) -> list[dict[str, o
         url = str(item.get("url") or "").strip()
         if not url:
             continue
+        url_type = str(item.get("category") or "website").lower()
+        key = (url_type, url)
+        if key in seen:
+            continue
+        seen.add(key)
         rows.append(
             {
                 "source": "igdb",
                 "source_game_id": game_id,
-                "url_type": str(item.get("category") or "website").lower(),
+                "url_type": url_type,
                 "url": url,
                 "source_specific_json": {},
                 "stg_loaded_at": now,
