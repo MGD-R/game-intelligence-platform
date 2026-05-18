@@ -304,13 +304,16 @@ def transform_igdb_payloads(raw_payloads: list[tuple[dict[str, Any], str]]) -> I
 
 def load_igdb_payloads(repository: IngestionRepository) -> list[tuple[dict[str, Any], str]]:
     rows = repository.fetch_raw_rows("raw.igdb_games")
-    payloads: list[tuple[dict[str, Any], str]] = []
+    payloads_by_game_id: dict[str, tuple[dict[str, Any], str]] = {}
     for row in rows:
         response_json = row.get("response_json")
         if not isinstance(response_json, dict):
             continue
-        payloads.append((response_json, str(row.get("loaded_at"))))
-    return payloads
+        game_id = str(response_json.get("id") or "").strip()
+        if not game_id:
+            continue
+        payloads_by_game_id[game_id] = (response_json, str(row.get("loaded_at")))
+    return list(payloads_by_game_id.values())
 
 
 def write_bundle(repository: IngestionRepository, bundle: IGDBStagingBundle) -> None:

@@ -79,6 +79,9 @@ make steam-staging
 make igdb-check
 make igdb-ids
 make igdb-reference
+make igdb-search-seeds
+make igdb-search
+make igdb-search-candidates
 make igdb-staging
 make wikipedia-check
 make wikipedia-pages
@@ -121,7 +124,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make wikidata` runs the safe targeted pipeline (`wikidata-by-rawg`, `wikidata-staging`) and does not request broad EntityData by default.
 `make wikidata-identity` remains available for the broader SPARQL identity path, but it is not the default MVP route for the first live run.
 `make steam` runs the targeted enrichment pipeline (`steam-appids`, `steam-details`, `steam-staging`) and does not scan the full Steam catalog.
-`make igdb` stays optional and targeted: it selects IGDB IDs from Wikidata external IDs, loads batch details, and maps them into staging without enabling IGDB by default.
+`make igdb` stays optional and targeted: the legacy path selects IGDB IDs from Wikidata external IDs, while the newer search path can use the current RAWG corpus as a retrieval anchor before promoting candidates into ER.
 `make wikipedia` runs the targeted summaries pipeline (`wikipedia-pages`, `wikipedia-load`, `wikipedia-staging`) and does not use broad search or opensearch by default.
 `make entity-data-base` prepares deterministic matches, candidate pairs, feature rows, reports, and parquet exports without calling external APIs.
 `make data-quality` validates staging prerequisites, rebuilds normalized staging rows, writes DQ and anomaly reports, and exports analysis-ready parquet snapshots.
@@ -179,6 +182,8 @@ make wikipedia-staging
 make igdb-check
 make igdb-ids
 make igdb-games
+make igdb-search
+make igdb-search-candidates
 make igdb-staging
 ```
 

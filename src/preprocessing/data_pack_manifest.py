@@ -22,6 +22,7 @@ RAW_TABLE_EXPORTS = {
     "raw.wikipedia_pages": "wikipedia_pages.jsonl.gz",
     "raw.igdb_games": "igdb_games.jsonl.gz",
     "raw.igdb_reference_data": "igdb_reference_data.jsonl.gz",
+    "raw.igdb_search_results": "igdb_search_results.jsonl.gz",
 }
 
 PROCESSED_EXPORTS = (

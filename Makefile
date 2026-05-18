@@ -7,7 +7,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-by-rawg wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata full-data-plan \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
-	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-demo igdb \
+	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-search-seeds igdb-search igdb-search-candidates igdb-search-demo igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
 	validate-staging validate-ml-data manual-review-seed dataset-manifest export-ml-ready \
@@ -195,6 +195,22 @@ igdb-games:
 igdb-staging:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.igdb_to_staging
+
+igdb-search-seeds:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.select_igdb_search_seeds
+
+igdb-search:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_igdb_search
+
+igdb-search-candidates:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.igdb_search_to_candidates
+
+igdb-search-demo: igdb-search igdb-staging
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.igdb_search_to_candidates --promote-pairs
 
 igdb-demo: igdb-ids igdb-games igdb-staging
 

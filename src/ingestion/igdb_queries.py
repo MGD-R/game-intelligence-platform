@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 FIELDS_GAMES = [
     "id",
     "name",
@@ -56,6 +58,10 @@ REFERENCE_ENDPOINTS = (
 )
 
 
+def _escape_search_text(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"').strip()
+
+
 def _fields_clause(fields: list[str]) -> str:
     return "fields " + ", ".join(fields) + ";"
 
@@ -70,6 +76,34 @@ def build_games_by_ids_query(ids: list[int], fields: list[str] | None = None) ->
 
 def build_reference_query(endpoint: str) -> str:
     return "fields id, name, slug, updated_at; sort id asc; limit 500;"
+
+
+def build_search_games_query(
+    query_text: str,
+    *,
+    fields: list[str] | None = None,
+    limit: int = 5,
+    release_year: int | None = None,
+    year_window: int = 0,
+) -> str:
+    cleaned_query = _escape_search_text(query_text)
+    if not cleaned_query:
+        raise ValueError("Search query text is required.")
+    resolved_fields = fields or FIELDS_GAMES
+    limit_clause = max(1, limit)
+    parts = [_fields_clause(resolved_fields), f'search "{cleaned_query}";']
+    if release_year is not None:
+        lower_year = release_year - max(0, year_window)
+        upper_year = release_year + max(0, year_window) + 1
+        lower_epoch = int(datetime(lower_year, 1, 1, tzinfo=UTC).timestamp())
+        upper_epoch = int(datetime(upper_year, 1, 1, tzinfo=UTC).timestamp())
+        parts.append(
+            "where first_release_date != null"
+            f" & first_release_date >= {lower_epoch}"
+            f" & first_release_date < {upper_epoch};"
+        )
+    parts.append(f"limit {limit_clause};")
+    return " ".join(parts)
 
 
 def build_external_games_query(ids: list[int]) -> str:

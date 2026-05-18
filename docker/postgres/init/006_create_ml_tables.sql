@@ -44,3 +44,20 @@ CREATE TABLE IF NOT EXISTS ml.entity_resolution_predictions (
     predicted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (pair_id, model_name, model_version)
 );
+
+CREATE TABLE IF NOT EXISTS ml.igdb_search_candidates (
+    candidate_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    source_name TEXT NOT NULL,
+    source_game_id TEXT NOT NULL,
+    candidate_source TEXT NOT NULL DEFAULT 'igdb',
+    igdb_id TEXT NOT NULL,
+    search_rank INTEGER NOT NULL,
+    query_text TEXT NOT NULL,
+    query_strategy TEXT NOT NULL,
+    confidence NUMERIC(5, 4),
+    metadata_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+    retrieved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_igdb_search_candidates_match
+    ON ml.igdb_search_candidates (source_name, source_game_id, candidate_source, igdb_id);

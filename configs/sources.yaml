@@ -75,4 +75,5 @@ sources:
     max_concurrent_requests: 8
     max_items_per_request: 500
     demo_limit: 50
+    search_result_limit: 5
     rate_limit_per_minute: 20
