@@ -38,6 +38,7 @@ Wikipedia summaries enrichment: [docs/wikipedia_summaries.md](docs/wikipedia_sum
 ML-ready datasets and final data-stage build: [docs/ml_ready_datasets.md](docs/ml_ready_datasets.md).
 Entity Resolution baseline: [docs/entity_resolution_baseline.md](docs/entity_resolution_baseline.md).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
+IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
 
 ## Quick Start

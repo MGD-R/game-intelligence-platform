@@ -7,6 +7,7 @@ from src.ingestion.jobs import load_wikipedia_pages as wikipedia_pages_job
 from src.ingestion.jobs.load_wikipedia_pages import (
     default_page_limit,
     load_page_with_backoff,
+    load_selected_pages,
 )
 from src.ingestion.jobs.load_wikipedia_pages import (
     main as load_wikipedia_pages_main,
@@ -60,3 +61,51 @@ def test_load_page_with_backoff_retries_http_429(monkeypatch: pytest.MonkeyPatch
     assert response.title == "Example"
     assert attempts["count"] == 3
     assert slept == [42, 42]
+
+
+def test_load_selected_pages_skips_http_404(capsys) -> None:
+    inserted: list[str] = []
+
+    class _Repository:
+        def insert_raw_record(self, **kwargs: object) -> None:
+            inserted.append(str(kwargs["source_record_id"]))
+
+    class _Client:
+        def __init__(self) -> None:
+            self.repository = _Repository()
+
+        def get_page_summary(self, language: str, title: str, **_: object):
+            if title == "Missing":
+                raise HTTPStatusError(
+                    source="wikipedia",
+                    endpoint=f"https://{language}.wikipedia.org/api/rest_v1/page/summary/{title}",
+                    status_code=404,
+                    request_hash="missing-hash",
+                    from_cache=False,
+                )
+            return types.SimpleNamespace(
+                endpoint=f"/page/summary/{title}",
+                request_hash=f"hash-{title}",
+                payload={"title": title},
+                response_hash=f"response-{title}",
+                cache_path=None,
+                from_cache=False,
+                http_status=200,
+                error_message=None,
+            )
+
+    metrics = load_selected_pages(
+        _Client(),
+        [
+            {"language": "ru", "title": "Missing", "qid": "Q1", "url": "", "url_type": "ruwiki"},
+            {"language": "ru", "title": "Loaded", "qid": "Q2", "url": "", "url_type": "ruwiki"},
+        ],
+        force_refresh=False,
+        from_cache_only=False,
+        retry_limit=1,
+        retry_backoff_seconds=1,
+    )
+
+    assert metrics == {"loaded_pages": 1, "skipped_pages": 1}
+    assert inserted == ["ru:Loaded"]
+    assert "skipped_page" in capsys.readouterr().out

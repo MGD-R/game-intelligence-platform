@@ -111,6 +111,23 @@ class IngestionRepository:
                 from_cache
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (source, request_hash)
+            WHERE request_hash IS NOT NULL
+            DO UPDATE
+            SET endpoint = EXCLUDED.endpoint,
+                request_method = EXCLUDED.request_method,
+                request_url = EXCLUDED.request_url,
+                request_params_json = EXCLUDED.request_params_json,
+                request_body = EXCLUDED.request_body,
+                from_cache = EXCLUDED.from_cache,
+                http_status = NULL,
+                response_hash = NULL,
+                response_storage_path = NULL,
+                started_at = NOW(),
+                finished_at = NULL,
+                duration_ms = NULL,
+                error_message = NULL,
+                updated_at = NOW()
             RETURNING request_id
         """
         with self.connection() as connection:

@@ -36,6 +36,8 @@ def parse_qid(value: str | None) -> str | None:
 def parse_release_date(value: str | None) -> tuple[str | None, int | None]:
     if not value:
         return None, None
+    if not re.match(r"^\d{4}-\d{2}-\d{2}", value):
+        return None, None
     date_value = value[:10]
     year = int(date_value[:4]) if len(date_value) >= 4 and date_value[:4].isdigit() else None
     return date_value, year

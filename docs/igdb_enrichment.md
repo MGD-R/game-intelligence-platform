@@ -90,3 +90,16 @@ Staging:
 - It is still optional and not part of default `make demo-data`.
 - First live download should still start with RAWG + Wikidata, then data quality, then optional enrichments.
 - IGDB should only be enabled after `make igdb-check` and an explicitly approved tiny live-check confirm that credentials, token flow, and quota behavior are stable.
+
+## Research Extension
+
+The current integration treats IGDB as an optional ID-based enrichment source. A separate next-stage plan for `name-based` and metadata-based ML matching is documented here:
+
+- [IGDB ML matching research plan](igdb_ml_matching_research_plan.md)
+
+That plan covers:
+
+- when IGDB should be used as a targeted search source instead of a broad crawler;
+- what additional raw/staging structures are needed for search candidates;
+- which matching features and labels are recommended for an ML demonstration;
+- what corpus size is sufficient for a meaningful experiment.

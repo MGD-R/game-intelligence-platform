@@ -104,6 +104,63 @@ def load_page_with_backoff(
             time.sleep(retry_backoff_seconds)
 
 
+def load_selected_pages(
+    client: WikipediaClient,
+    pages: list[dict[str, str]],
+    *,
+    force_refresh: bool,
+    from_cache_only: bool,
+    retry_limit: int,
+    retry_backoff_seconds: int,
+) -> dict[str, int]:
+    if client.repository is None:
+        raise RuntimeError("Database repository is unavailable for Wikipedia page load")
+
+    loaded_pages = 0
+    skipped_pages = 0
+    for page in pages:
+        try:
+            response = load_page_with_backoff(
+                client,
+                page,
+                force_refresh=force_refresh,
+                from_cache_only=from_cache_only,
+                retry_limit=retry_limit,
+                retry_backoff_seconds=retry_backoff_seconds,
+            )
+        except HTTPStatusError as exc:
+            if exc.status_code == 404:
+                skipped_pages += 1
+                print(
+                    {
+                        "skipped_page": page["title"],
+                        "language": page["language"],
+                        "status_code": exc.status_code,
+                    }
+                )
+                continue
+            raise
+
+        client.repository.insert_raw_record(
+            table_name="raw.wikipedia_pages",
+            endpoint=response.endpoint,
+            request_hash=response.request_hash,
+            source_record_id=f"{page['language']}:{page['title']}",
+            response_json=build_wrapped_response(page, response.payload),
+            response_hash=response.response_hash,
+            response_storage_path=response.cache_path,
+            from_cache=response.from_cache,
+            http_status=response.http_status,
+            error_message=response.error_message,
+        )
+        loaded_pages += 1
+
+    return {
+        "loaded_pages": loaded_pages,
+        "skipped_pages": skipped_pages,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_common_parser("Load targeted Wikipedia summary pages.")
     parser.add_argument("--pages-file", help="JSONL file created by select_wikipedia_pages.")
@@ -182,31 +239,18 @@ def main(argv: list[str] | None = None) -> int:
             )
         pages = pages[: max(1, args.limit)]
 
-        for page in pages:
-            response = load_page_with_backoff(
-                client,
-                page,
-                force_refresh=args.force_refresh,
-                from_cache_only=args.from_cache_only,
-                retry_limit=max(0, args.retry_limit),
-                retry_backoff_seconds=max(1, args.retry_backoff_seconds),
-            )
-            if client.repository is None:
-                raise RuntimeError("Database repository is unavailable for Wikipedia page load")
-            client.repository.insert_raw_record(
-                table_name="raw.wikipedia_pages",
-                endpoint=response.endpoint,
-                request_hash=response.request_hash,
-                source_record_id=f"{page['language']}:{page['title']}",
-                response_json=build_wrapped_response(page, response.payload),
-                response_hash=response.response_hash,
-                response_storage_path=response.cache_path,
-                from_cache=response.from_cache,
-                http_status=response.http_status,
-                error_message=response.error_message,
-            )
-
-        logger.mark_finished(status="completed", metrics={"requested_pages": len(pages)})
+        metrics = load_selected_pages(
+            client,
+            pages,
+            force_refresh=args.force_refresh,
+            from_cache_only=args.from_cache_only,
+            retry_limit=max(0, args.retry_limit),
+            retry_backoff_seconds=max(1, args.retry_backoff_seconds),
+        )
+        logger.mark_finished(
+            status="completed",
+            metrics={"requested_pages": len(pages), **metrics},
+        )
         print({"loaded_pages": pages})
         return 0
     except Exception as exc:

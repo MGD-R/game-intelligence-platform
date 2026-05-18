@@ -46,8 +46,6 @@ def main(argv: list[str] | None = None) -> int:
         ids = parse_ids(args.ids, args.ids_file)
         if args.limit > 0:
             ids = ids[: args.limit]
-        else:
-            ids = []
 
         for rawg_id in ids:
             response = client.get_game_details(
