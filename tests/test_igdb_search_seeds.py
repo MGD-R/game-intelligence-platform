@@ -1,5 +1,6 @@
 from src.ingestion.jobs.select_igdb_search_seeds import (
     build_search_queries,
+    extract_attempted_source_ids,
     select_igdb_search_seeds_from_rows,
 )
 
@@ -53,3 +54,22 @@ def test_select_igdb_search_seeds_can_filter_unmatched_only() -> None:
     )
     assert len(seeds) == 1
     assert seeds[0]["source_game_id"] == "2"
+
+
+def test_extract_attempted_source_ids_reads_anchor_payload() -> None:
+    attempted = extract_attempted_source_ids(
+        [
+            {
+                "response_json": {
+                    "anchor": {"source": "rawg", "source_game_id": "42"},
+                    "query": {
+                        "text": "Example",
+                        "strategy": "source_name",
+                        "rank": None,
+                    },
+                    "candidate": None,
+                }
+            }
+        ]
+    )
+    assert attempted == {"42"}

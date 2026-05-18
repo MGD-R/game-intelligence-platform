@@ -106,6 +106,22 @@ def build_search_queries(
     return queries
 
 
+def extract_attempted_source_ids(raw_search_rows: list[dict[str, object]]) -> set[str]:
+    attempted: set[str] = set()
+    for row in raw_search_rows:
+        payload = row.get("response_json")
+        if not isinstance(payload, dict):
+            continue
+        anchor = payload.get("anchor")
+        if not isinstance(anchor, dict):
+            continue
+        source_name = str(anchor.get("source") or "").strip()
+        source_game_id = str(anchor.get("source_game_id") or "").strip()
+        if source_name == "rawg" and source_game_id:
+            attempted.add(source_game_id)
+    return attempted
+
+
 def select_igdb_search_seeds_from_rows(
     *,
     rawg_rows: list[dict[str, object]],
@@ -224,6 +240,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.missing_only
         else []
     )
+    attempted_ids: set[str] = set()
+    if args.missing_only:
+        repository.ensure_igdb_search_results_table()
+        attempted_rows = repository.fetch_staging_rows("raw.igdb_search_results")
+        attempted_ids = extract_attempted_source_ids(attempted_rows)
     seeds = select_igdb_search_seeds_from_rows(
         rawg_rows=rawg_rows,
         external_rows=external_rows,
@@ -234,6 +255,14 @@ def main(argv: list[str] | None = None) -> int:
         unmatched_only=args.unmatched_only,
         missing_only=args.missing_only,
     )
+    if attempted_ids:
+        seeds = [
+            seed
+            for seed in seeds
+            if str(seed.get("source_game_id") or "").strip() not in attempted_ids
+        ]
+        if args.limit is not None:
+            seeds = seeds[: args.limit]
     if not seeds:
         raise RuntimeError(
             "No IGDB search seeds available. "

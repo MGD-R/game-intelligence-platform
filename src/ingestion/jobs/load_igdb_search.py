@@ -30,6 +30,10 @@ def build_source_record_id(
     return f'{seed["source"]}:{seed["source_game_id"]}:{query["query_strategy"]}:{candidate_id}'
 
 
+def build_empty_result_record_id(seed: dict[str, object], query: dict[str, str]) -> str:
+    return f'{seed["source"]}:{seed["source_game_id"]}:{query["query_strategy"]}:__empty__'
+
+
 def load_seeds(client: IGDBClient, args) -> list[dict[str, object]]:  # type: ignore[no-untyped-def]
     if getattr(args, "input_file", None):
         return json.loads(Path(args.input_file).read_text(encoding="utf-8"))
@@ -131,6 +135,37 @@ def main(argv: list[str] | None = None) -> int:
                 from_cache_only=args.from_cache_only,
             )
             payload = response.payload if isinstance(response.payload, list) else []
+            if not payload:
+                wrapped_payload = {
+                    "anchor": {
+                        "source": seed.get("source"),
+                        "source_game_id": seed.get("source_game_id"),
+                        "name": seed.get("name"),
+                        "slug": seed.get("slug"),
+                        "release_year": seed.get("release_year"),
+                        "matched_to_wikidata": seed.get("matched_to_wikidata"),
+                    },
+                    "query": {
+                        "text": query_text,
+                        "strategy": query_strategy,
+                        "rank": None,
+                    },
+                    "candidate": None,
+                }
+                client.repository.insert_raw_record(
+                    table_name="raw.igdb_search_results",
+                    endpoint=response.endpoint,
+                    request_hash=response.request_hash,
+                    source_record_id=build_empty_result_record_id(seed, query),
+                    response_json=wrapped_payload,
+                    response_hash=response.response_hash,
+                    response_storage_path=response.cache_path,
+                    from_cache=response.from_cache,
+                    http_status=response.http_status,
+                    error_message=response.error_message,
+                )
+                searched_records += 1
+                continue
             for rank, item in enumerate(payload, start=1):
                 if not isinstance(item, dict):
                     continue
