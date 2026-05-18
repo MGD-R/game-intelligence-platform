@@ -16,6 +16,7 @@ from src.ingestion.jobs.load_wikipedia_pages import (
 from src.ingestion.jobs.select_wikipedia_pages import (
     main as select_wikipedia_pages_main,
 )
+from src.ingestion.jobs.select_wikipedia_pages import title_from_url
 
 
 def test_wikipedia_jobs_support_dry_run() -> None:
@@ -168,3 +169,14 @@ def test_select_missing_pages_prefers_ru_and_skips_covered_games() -> None:
             "url_type": "ruwiki",
         },
     ]
+
+
+def test_title_from_url_keeps_nested_wiki_path() -> None:
+    assert (
+        title_from_url("https://en.wikipedia.org/wiki/Final_Fantasy_X/X-2_HD_Remaster")
+        == "Final Fantasy X/X-2 HD Remaster"
+    )
+    assert (
+        title_from_url("https://en.wikipedia.org/wiki/Split/Second:_Velocity")
+        == "Split/Second: Velocity"
+    )

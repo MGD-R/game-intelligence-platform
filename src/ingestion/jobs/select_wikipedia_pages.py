@@ -23,8 +23,11 @@ def language_from_url_type(url_type: str) -> str | None:
 
 
 def title_from_url(url: str) -> str:
-    path = urlparse(url).path.rstrip("/")
-    title = path.rsplit("/", maxsplit=1)[-1]
+    path = urlparse(url).path
+    if "/wiki/" in path:
+        title = path.split("/wiki/", maxsplit=1)[1]
+    else:
+        title = path.rstrip("/").rsplit("/", maxsplit=1)[-1]
     return unquote(title).replace("_", " ")
 
 
