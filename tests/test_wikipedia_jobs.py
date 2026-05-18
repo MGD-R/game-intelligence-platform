@@ -8,6 +8,7 @@ from src.ingestion.jobs.load_wikipedia_pages import (
     default_page_limit,
     load_page_with_backoff,
     load_selected_pages,
+    select_missing_pages_from_rows,
 )
 from src.ingestion.jobs.load_wikipedia_pages import (
     main as load_wikipedia_pages_main,
@@ -109,3 +110,61 @@ def test_load_selected_pages_skips_http_404(capsys) -> None:
     assert metrics == {"loaded_pages": 1, "skipped_pages": 1}
     assert inserted == ["ru:Loaded"]
     assert "skipped_page" in capsys.readouterr().out
+
+
+def test_select_missing_pages_prefers_ru_and_skips_covered_games() -> None:
+    pages = select_missing_pages_from_rows(
+        [
+            {
+                "source": "wikidata",
+                "source_game_id": "Q1",
+                "url_type": "enwiki",
+                "url": "https://en.wikipedia.org/wiki/Alpha",
+            },
+            {
+                "source": "wikidata",
+                "source_game_id": "Q1",
+                "url_type": "ruwiki",
+                "url": "https://ru.wikipedia.org/wiki/Alpha_ru",
+            },
+            {
+                "source": "wikidata",
+                "source_game_id": "Q2",
+                "url_type": "enwiki",
+                "url": "https://en.wikipedia.org/wiki/Beta",
+            },
+            {
+                "source": "wikidata",
+                "source_game_id": "Q3",
+                "url_type": "ruwiki",
+                "url": "https://ru.wikipedia.org/wiki/Gamma",
+            },
+        ],
+        [
+            {
+                "source": "wikipedia",
+                "source_game_id": "Q2",
+                "description_type": "summary",
+                "description_text": "already loaded",
+            }
+        ],
+    )
+
+    assert pages == [
+        {
+            "source_game_id": "Q1",
+            "qid": "Q1",
+            "language": "ru",
+            "title": "Alpha ru",
+            "url": "https://ru.wikipedia.org/wiki/Alpha_ru",
+            "url_type": "ruwiki",
+        },
+        {
+            "source_game_id": "Q3",
+            "qid": "Q3",
+            "language": "ru",
+            "title": "Gamma",
+            "url": "https://ru.wikipedia.org/wiki/Gamma",
+            "url_type": "ruwiki",
+        },
+    ]

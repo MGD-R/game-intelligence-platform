@@ -32,7 +32,10 @@ def test_wikipedia_summary_maps_to_descriptions_urls_and_qid_links() -> None:
     bundle = transform_wikipedia_payloads(payloads)
 
     assert len(bundle.source_game_descriptions) == 1
+    assert bundle.source_game_descriptions[0]["source_game_id"] == "Q12345"
     assert bundle.source_game_descriptions[0]["language"] == "ru"
+    assert bundle.source_game_urls[0]["source_game_id"] == "Q12345"
     assert bundle.source_game_urls[0]["url_type"] == "page"
+    assert bundle.source_game_external_ids[0]["source_game_id"] == "Q12345"
     assert bundle.source_game_external_ids[0]["external_source"] == "wikidata"
     assert bundle.source_game_external_ids[0]["external_id"] == "Q12345"

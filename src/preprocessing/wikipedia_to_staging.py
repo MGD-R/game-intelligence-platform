@@ -18,7 +18,14 @@ def normalize_description_text(value: str | None) -> str | None:
     return normalized or None
 
 
-def wikipedia_source_game_id(language: str, title: str, page_id: int | None) -> str:
+def wikipedia_source_game_id(
+    language: str,
+    title: str,
+    page_id: int | None,
+    qid: str | None,
+) -> str:
+    if qid:
+        return qid
     if page_id is not None:
         return str(page_id)
     return f"{language}:{title.replace(' ', '_')}"
@@ -71,16 +78,16 @@ def transform_wikipedia_payloads(
         language = response_language(response, selection)
         if not title:
             continue
+        qid = str(selection.get("qid") or "").strip()
         page_id_raw = response.get("pageid")
         page_id = int(page_id_raw) if isinstance(page_id_raw, int) else None
-        source_game_id = wikipedia_source_game_id(language, title, page_id)
+        source_game_id = wikipedia_source_game_id(language, title, page_id, qid or None)
         extract = normalize_description_text(str(response.get("extract") or ""))
         page_url = (
             response.get("content_urls", {}).get("desktop", {}).get("page")
             if isinstance(response.get("content_urls"), dict)
             else None
         )
-        qid = str(selection.get("qid") or "").strip()
 
         if extract:
             bundle.source_game_descriptions.append(

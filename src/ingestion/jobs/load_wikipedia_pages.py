@@ -13,6 +13,7 @@ from src.ingestion.cli import build_common_parser
 from src.ingestion.jobs.select_wikipedia_pages import (
     default_limit,
     select_pages_from_url_rows,
+    title_from_url,
 )
 from src.ingestion.pipeline_log import PipelineRunLogger
 from src.ingestion.wikipedia_client import WikipediaClient
@@ -60,6 +61,64 @@ def normalize_selection(
     if pages_file:
         return parse_pages_file(pages_file)
     return []
+
+
+def select_missing_pages_from_rows(
+    url_rows: list[dict[str, object]],
+    description_rows: list[dict[str, object]],
+    *,
+    limit: int | None = None,
+) -> list[dict[str, str]]:
+    covered_game_ids = {
+        str(row.get("source_game_id") or "")
+        for row in description_rows
+        if row.get("source") == "wikipedia"
+        and row.get("description_type") == "summary"
+        and str(row.get("description_text") or "").strip()
+    }
+    language_priority = {"ruwiki": 0, "enwiki": 1}
+    selected: list[dict[str, str]] = []
+    seen_game_ids: set[str] = set()
+    sorted_rows = sorted(
+        (
+            row
+            for row in url_rows
+            if row.get("source") == "wikidata"
+            and str(row.get("url_type") or "") in language_priority
+        ),
+        key=lambda row: (
+            language_priority[str(row.get("url_type") or "")],
+            str(row.get("source_game_id") or ""),
+            str(row.get("url") or ""),
+        ),
+    )
+    for row in sorted_rows:
+        source_game_id = str(row.get("source_game_id") or "").strip()
+        if (
+            not source_game_id
+            or source_game_id in covered_game_ids
+            or source_game_id in seen_game_ids
+        ):
+            continue
+        url_type = str(row.get("url_type") or "")
+        url = str(row.get("url") or "").strip()
+        if not url:
+            continue
+        language = "ru" if url_type == "ruwiki" else "en"
+        selected.append(
+            {
+                "source_game_id": source_game_id,
+                "qid": source_game_id,
+                "language": language,
+                "title": title_from_url(url),
+                "url": url,
+                "url_type": url_type,
+            }
+        )
+        seen_game_ids.add(source_game_id)
+        if limit is not None and len(selected) >= limit:
+            break
+    return selected
 
 
 def build_wrapped_response(
@@ -166,6 +225,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pages-file", help="JSONL file created by select_wikipedia_pages.")
     parser.add_argument("--title", help="Single explicit Wikipedia page title.")
     parser.add_argument(
+        "--missing-only",
+        action="store_true",
+        help="Select only games that do not yet have a non-empty Wikipedia summary in staging.",
+    )
+    parser.add_argument(
         "--language",
         choices=("ru", "en"),
         help="Language for explicit --title mode.",
@@ -210,7 +274,15 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(
             {
-                "selection_source": "explicit_pages" if explicit_pages else "wikidata_sitelinks",
+                "selection_source": (
+                    "explicit_pages"
+                    if explicit_pages
+                    else (
+                        "wikidata_missing_summaries"
+                        if args.missing_only
+                        else "wikidata_sitelinks"
+                    )
+                ),
                 "limit": args.limit,
                 "request_preview": response.request_metadata,
             }
@@ -223,15 +295,29 @@ def main(argv: list[str] | None = None) -> int:
         stage_name="raw",
         repository=client.repository,
     )
-    logger.mark_started(parameters={"limit": args.limit})
+    logger.mark_started(parameters={"limit": args.limit, "missing_only": args.missing_only})
 
     try:
         pages = explicit_pages
         if not pages:
             if client.repository is None:
                 raise RuntimeError("Database repository is unavailable for Wikipedia selection")
-            rows = client.repository.fetch_staging_rows("stg.source_game_urls", source="wikidata")
-            pages = select_pages_from_url_rows(rows, limit=max(1, args.limit))
+            url_rows = client.repository.fetch_staging_rows(
+                "stg.source_game_urls",
+                source="wikidata",
+            )
+            if args.missing_only:
+                description_rows = client.repository.fetch_staging_rows(
+                    "stg.source_game_descriptions",
+                    source="wikipedia",
+                )
+                pages = select_missing_pages_from_rows(
+                    url_rows,
+                    description_rows,
+                    limit=max(1, args.limit),
+                )
+            else:
+                pages = select_pages_from_url_rows(url_rows, limit=max(1, args.limit))
         if not pages:
             raise RuntimeError(
                 "No Wikipedia sitelinks found for targeted summaries. "
