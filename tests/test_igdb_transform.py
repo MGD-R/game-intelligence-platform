@@ -77,3 +77,21 @@ def test_igdb_fixture_deduplicates_duplicate_urls() -> None:
     ]
     bundle = transform_igdb_payloads([(payload, "2026-01-01T00:00:00+00:00")])
     assert len(bundle.source_game_urls) == 1
+
+
+def test_igdb_fixture_deduplicates_duplicate_company_roles() -> None:
+    payload = read_fixture("game_response.json")
+    payload["involved_companies"] = [
+        {
+            "company": {"name": "Microids"},
+            "publisher": True,
+        },
+        {
+            "company": {"name": "Microids"},
+            "publisher": True,
+        },
+    ]
+    bundle = transform_igdb_payloads([(payload, "2026-01-01T00:00:00+00:00")])
+    assert len(bundle.source_game_companies) == 1
+    assert bundle.source_game_companies[0]["company_name"] == "Microids"
+    assert bundle.source_game_companies[0]["company_role"] == "publisher"

@@ -40,6 +40,7 @@ def _extract_names(items: object, key: str = "name") -> list[str]:
 
 def _extract_company_rows(items: object) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
     if not isinstance(items, list):
         return rows
     for item in items:
@@ -51,6 +52,10 @@ def _extract_company_rows(items: object) -> list[dict[str, object]]:
             continue
         for role_name in ("developer", "publisher", "porting", "supporting"):
             if item.get(role_name):
+                key = (company_name, role_name)
+                if key in seen:
+                    continue
+                seen.add(key)
                 rows.append({"company_name": company_name, "company_role": role_name})
     return rows
 
