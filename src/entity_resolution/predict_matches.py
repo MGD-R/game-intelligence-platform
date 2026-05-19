@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 from typing import Any
 
 import joblib
@@ -88,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     probabilities = pipeline.predict_proba(prepared.select(feature_names).to_numpy())[:, 1].tolist()
     policy = load_threshold_policy()
+    policy_json = asdict(policy)
     rows = []
     repository = IngestionRepository()
     for row, probability in zip(prepared.to_dicts(), probabilities, strict=False):
@@ -100,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
                 "decision": decision,
                 "model_name": "logistic_regression_baseline",
                 "model_version": "v1",
-                "threshold_policy_json": policy.__dict__,
+                "threshold_policy_json": policy_json,
                 "explanation_factors_json": explanation,
             }
         )
@@ -110,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
             model_version="v1",
             same_game_probability=float(probability),
             decision=decision,
-            threshold_policy_json=policy.__dict__,
+            threshold_policy_json=policy_json,
             explanation_factors_json=explanation,
         )
 

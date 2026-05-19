@@ -81,7 +81,7 @@ def build_rule_predictions(frame: pl.DataFrame) -> pl.DataFrame:
                 "explanation_factors_json": {"reasons": reasons},
             }
         )
-    return pl.DataFrame(rows)
+    return pl.DataFrame(rows, infer_schema_length=None)
 
 
 def build_parser() -> argparse.ArgumentParser:

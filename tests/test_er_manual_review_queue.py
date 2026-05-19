@@ -44,3 +44,32 @@ def test_manual_review_queue_sorts_borderline_examples_first() -> None:
     queue = build_review_queue(frame)
 
     assert queue["source_id_a"].to_list()[0] == "2"
+
+
+def test_manual_review_queue_can_enrich_missing_names_from_source_games() -> None:
+    frame = pl.DataFrame(
+        [
+            {
+                "source_a": "rawg",
+                "source_id_a": "1",
+                "source_b": "igdb",
+                "source_id_b": "10",
+                "same_game_probability": 0.82,
+                "decision": "manual_review",
+                "explanation_factors_json": "{}",
+                "candidate_source": "igdb_search",
+                "label_source": None,
+            }
+        ]
+    )
+    source_games = pl.DataFrame(
+        [
+            {"source": "rawg", "source_game_id": "1", "name": "Game A", "release_year": 2013},
+            {"source": "igdb", "source_game_id": "10", "name": "Game A", "release_year": 2013},
+        ]
+    )
+
+    queue = build_review_queue(frame, source_games)
+
+    assert queue["name_a"].to_list() == ["Game A"]
+    assert queue["name_b"].to_list() == ["Game A"]

@@ -19,7 +19,23 @@ from sklearn.metrics import (
 from src.entity_resolution.io import ensure_output_directories
 
 
+def with_label_column(frame: pl.DataFrame) -> pl.DataFrame:
+    if "label" in frame.columns:
+        return frame
+    if "label_value" not in frame.columns:
+        return frame.with_columns(pl.lit(None, dtype=pl.Int64).alias("label"))
+    return frame.with_columns(
+        pl.when(pl.col("label_value") == "1")
+        .then(pl.lit(1))
+        .when(pl.col("label_value") == "0")
+        .then(pl.lit(0))
+        .otherwise(pl.lit(None, dtype=pl.Int64))
+        .alias("label")
+    )
+
+
 def compute_er_metrics(frame: pl.DataFrame) -> dict[str, Any]:
+    frame = with_label_column(frame)
     labeled = frame.filter(pl.col("label").is_not_null())
     if labeled.is_empty():
         return {
