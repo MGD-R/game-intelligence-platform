@@ -10,10 +10,10 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-search-seeds igdb-search igdb-search-candidates igdb-search-demo igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
-	validate-staging validate-ml-data manual-review-seed dataset-manifest export-ml-ready \
+	validate-staging validate-ml-data manual-review-seed manual-review-db manual-review-db-seed dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-review-queue \
-	er-baseline export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
+	er-baseline code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
 	recommendations rag demo-data all
 
 DATA_PACK ?= data_packs/gip_demo_local
@@ -262,6 +262,14 @@ manual-review-seed:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.build_manual_review_seed
 
+manual-review-db:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.setup_manual_review
+
+manual-review-db-seed:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.seed_manual_review_queue
+
 dataset-manifest:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.build_dataset_manifest
@@ -308,6 +316,15 @@ er-review-queue:
 er-baseline:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.run_baseline_pipeline
+
+code-graph:
+	$(WORKER_RUN) python -m src.devtools.code_graph --once
+
+code-graph-watch:
+	$(WORKER_RUN) python -m src.devtools.code_graph --watch
+
+code-graph-mcp:
+	$(WORKER_RUN) python -m src.devtools.code_graph_mcp
 
 recommendations:
 	$(WORKER_RUN) python -m src.recommendations.build_recommendations
