@@ -37,6 +37,8 @@ Steam targeted enrichment: [docs/steam_enrichment.md](docs/steam_enrichment.md).
 Wikipedia summaries enrichment: [docs/wikipedia_summaries.md](docs/wikipedia_summaries.md).
 ML-ready datasets and final data-stage build: [docs/ml_ready_datasets.md](docs/ml_ready_datasets.md).
 Entity Resolution baseline: [docs/entity_resolution_baseline.md](docs/entity_resolution_baseline.md).
+ML research defense plan: [docs/ml_research_defense_plan.md](docs/ml_research_defense_plan.md).
+ML research findings: [docs/ml_research_findings.md](docs/ml_research_findings.md).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
 IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
@@ -110,6 +112,8 @@ make er-predict
 make er-evaluate
 make er-review-queue
 make er-baseline
+make er-merge-strategy-comparison
+make ml-research-defense
 make quota-status
 make rawg
 make wikidata
@@ -130,6 +134,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make data-quality` validates staging prerequisites, rebuilds normalized staging rows, writes DQ and anomaly reports, and exports analysis-ready parquet snapshots.
 `make ml-ready-data` finalizes the local data stage: validation, candidate/feature refresh, DQ artifacts, manual review seed, parquet exports, and dataset manifest, again without external API calls.
 `make er-baseline` builds the weak-label training dataset, runs rule and Logistic Regression baselines, predicts matches, evaluates metrics, and prepares a manual review queue without external APIs.
+`make ml-research-defense` builds defense-ready research artifacts: baseline counts, ablation study, calibration analysis, active-learning candidates, and recommendation examples.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
 
 ## First Controlled API Download
