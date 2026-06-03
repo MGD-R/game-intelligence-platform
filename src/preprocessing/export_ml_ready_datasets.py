@@ -190,6 +190,18 @@ DATASET_SPECS: dict[str, dict[str, object]] = {
             "external_id": pl.Utf8,
         },
     },
+    "game_recommendations": {
+        "table": "dm.game_recommendations",
+        "required": False,
+        "schema": {
+            "canonical_game_id": pl.Utf8,
+            "recommended_canonical_game_id": pl.Utf8,
+            "rank": pl.Int64,
+            "score": pl.Float64,
+            "algorithm": pl.Utf8,
+            "explanation_factors_json": pl.Utf8,
+        },
+    },
     "manual_review_seed": {
         "table": None,
         "required": False,

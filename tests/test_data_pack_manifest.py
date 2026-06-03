@@ -32,6 +32,7 @@ class _RepoStub:
             "dm.canonical_game_sources": 2,
             "dm.canonical_game_aliases": 1,
             "dm.canonical_game_external_ids": 1,
+            "dm.game_recommendations": 1,
         }
         if source is not None:
             return source_counts.get((table_name, source), 0)

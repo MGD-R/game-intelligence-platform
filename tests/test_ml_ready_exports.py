@@ -143,6 +143,16 @@ class ExportRepositoryStub:
                     "external_id": "1",
                 }
             ],
+            "dm.game_recommendations": [
+                {
+                    "canonical_game_id": "canonical-1",
+                    "recommended_canonical_game_id": "canonical-2",
+                    "rank": 1,
+                    "score": 0.75,
+                    "algorithm": "content_weighted_jaccard_v1",
+                    "explanation_factors_json": '{"genre": ["Action"]}',
+                }
+            ],
         }
         return rows[table_name]
 
@@ -200,8 +210,10 @@ def test_exporter_writes_expected_files(monkeypatch, tmp_path: Path) -> None:
     assert (tmp_path / "manual_review_seed.parquet").exists()
     assert (tmp_path / "canonical_games.parquet").exists()
     assert (tmp_path / "canonical_game_sources.parquet").exists()
+    assert (tmp_path / "game_recommendations.parquet").exists()
     assert pl.read_parquet(tmp_path / "entity_candidate_pairs.parquet").height == 1
     assert pl.read_parquet(tmp_path / "canonical_games.parquet").height == 1
+    assert pl.read_parquet(tmp_path / "game_recommendations.parquet").height == 1
 
 
 def test_exporter_writes_empty_optional_parquet_files(monkeypatch, tmp_path: Path) -> None:

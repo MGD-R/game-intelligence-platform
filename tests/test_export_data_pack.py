@@ -41,6 +41,7 @@ class _ExportRepoStub:
             "dm.canonical_game_sources": 2,
             "dm.canonical_game_aliases": 1,
             "dm.canonical_game_external_ids": 1,
+            "dm.game_recommendations": 1,
         }
         source_counts = {
             ("raw.rawg_game_index", "rawg"): 1,

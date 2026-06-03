@@ -42,6 +42,7 @@ PROCESSED_EXPORTS = (
     "canonical_game_sources.parquet",
     "canonical_game_aliases.parquet",
     "canonical_game_external_ids.parquet",
+    "game_recommendations.parquet",
     "manual_review_seed.parquet",
 )
 
@@ -133,6 +134,7 @@ def build_data_pack_manifest(
             "dm.canonical_game_external_ids": repository.count_rows(
                 "dm.canonical_game_external_ids"
             ),
+            "dm.game_recommendations": repository.count_rows("dm.game_recommendations"),
         }
     )
     api_calls_by_source = {
@@ -174,6 +176,7 @@ def build_data_pack_manifest(
         "canonical_layer": (
             row_counts["dm.canonical_games"] > 0 and row_counts["dm.canonical_game_sources"] > 0
         ),
+        "recommendations": row_counts["dm.game_recommendations"] > 0,
         "dq_reports": report_exports_ready,
         "ml_ready_exports": processed_exports_ready,
     }
