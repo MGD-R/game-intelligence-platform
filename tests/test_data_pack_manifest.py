@@ -27,6 +27,11 @@ class _RepoStub:
             "stg.source_games": 3,
             "stg.source_game_external_ids": 6,
             "ml.entity_candidate_pairs": 1,
+            "ml.entity_resolution_features": 1,
+            "dm.canonical_games": 1,
+            "dm.canonical_game_sources": 2,
+            "dm.canonical_game_aliases": 1,
+            "dm.canonical_game_external_ids": 1,
         }
         if source is not None:
             return source_counts.get((table_name, source), 0)

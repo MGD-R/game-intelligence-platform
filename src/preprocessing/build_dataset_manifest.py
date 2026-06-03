@@ -46,7 +46,11 @@ def build_manifest(
     export_paths = build_output_paths(output_dir)
     row_counts = {name: _parquet_row_count(path) for name, path in export_paths.items()}
     row_counts_by_source = {
-        source_name: repository.count_rows("stg.source_games", source=source_name)
+        source_name: (
+            repository.count_rows("stg.source_game_descriptions", source=source_name)
+            if source_name == "wikipedia"
+            else repository.count_rows("stg.source_games", source=source_name)
+        )
         for source_name in ("rawg", "wikidata", "steam", "wikipedia", "igdb")
     }
     candidate_pairs = repository.fetch_candidate_pairs()

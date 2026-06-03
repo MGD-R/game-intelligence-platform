@@ -29,8 +29,20 @@ PROCESSED_EXPORTS = (
     "source_games.parquet",
     "source_aliases.parquet",
     "source_external_ids.parquet",
+    "source_genres.parquet",
+    "source_tags.parquet",
+    "source_platforms.parquet",
+    "source_companies.parquet",
+    "source_descriptions.parquet",
+    "source_ratings.parquet",
+    "source_popularity.parquet",
     "entity_candidate_pairs.parquet",
     "entity_resolution_feature_base.parquet",
+    "canonical_games.parquet",
+    "canonical_game_sources.parquet",
+    "canonical_game_aliases.parquet",
+    "canonical_game_external_ids.parquet",
+    "manual_review_seed.parquet",
 )
 
 REPORT_EXPORTS = (
@@ -115,6 +127,12 @@ def build_data_pack_manifest(
             "stg.source_game_external_ids": repository.count_rows("stg.source_game_external_ids"),
             "ml.entity_candidate_pairs": repository.count_rows("ml.entity_candidate_pairs"),
             "ml.entity_resolution_features": repository.count_rows("ml.entity_resolution_features"),
+            "dm.canonical_games": repository.count_rows("dm.canonical_games"),
+            "dm.canonical_game_sources": repository.count_rows("dm.canonical_game_sources"),
+            "dm.canonical_game_aliases": repository.count_rows("dm.canonical_game_aliases"),
+            "dm.canonical_game_external_ids": repository.count_rows(
+                "dm.canonical_game_external_ids"
+            ),
         }
     )
     api_calls_by_source = {
@@ -153,6 +171,9 @@ def build_data_pack_manifest(
         "external_id_matching": wikidata_rawg_external_id_count > 0,
         "candidate_pairs": row_counts["ml.entity_candidate_pairs"] > 0,
         "feature_base": row_counts["ml.entity_resolution_features"] > 0,
+        "canonical_layer": (
+            row_counts["dm.canonical_games"] > 0 and row_counts["dm.canonical_game_sources"] > 0
+        ),
         "dq_reports": report_exports_ready,
         "ml_ready_exports": processed_exports_ready,
     }
@@ -185,6 +206,7 @@ def build_data_pack_manifest(
         "ml_ready": (
             step_status["candidate_pairs"]
             and step_status["feature_base"]
+            and step_status["canonical_layer"]
             and step_status["ml_ready_exports"]
         ),
         "completed_steps": completed_steps,

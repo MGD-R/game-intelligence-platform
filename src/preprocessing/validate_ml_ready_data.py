@@ -26,6 +26,10 @@ REQUIRED_TABLES = (
     "stg.source_game_popularity",
     "ml.entity_candidate_pairs",
     "ml.entity_resolution_features",
+    "dm.canonical_games",
+    "dm.canonical_game_sources",
+    "dm.canonical_game_aliases",
+    "dm.canonical_game_external_ids",
 )
 FOLLOW_UP_COMMANDS = (
     "make rawg-demo",
@@ -91,6 +95,12 @@ def validation_error_message(validation: MLReadyValidation) -> str:
     return " | ".join(parts)
 
 
+def _source_content_count(repository: IngestionRepository, source_name: str) -> int:
+    if source_name == "wikipedia":
+        return repository.count_rows("stg.source_game_descriptions", source=source_name)
+    return repository.count_rows("stg.source_games", source=source_name)
+
+
 def validate_ml_ready_state(
     repository: IngestionRepository,
     *,
@@ -130,10 +140,12 @@ def validate_ml_ready_state(
     optional_sources = ("steam", "wikipedia", "igdb")
     for source_name in (*required_sources, *optional_sources):
         count = repository.count_rows("stg.source_games", source=source_name)
+        content_count = _source_content_count(repository, source_name)
         validation.counts[f"{source_name}_game_count"] = count
+        validation.counts[f"{source_name}_content_count"] = content_count
         if source_name in required_sources and count == 0 and not allow_empty:
             validation.errors.append(f"missing required staging rows for source: {source_name}")
-        if source_name in optional_sources and count == 0:
+        if source_name in optional_sources and content_count == 0:
             validation.warnings.append(f"optional source not loaded: {source_name}")
 
     external_id_counts = {
@@ -153,12 +165,20 @@ def validate_ml_ready_state(
 
     candidate_pair_count = repository.count_rows("ml.entity_candidate_pairs")
     feature_count = repository.count_rows("ml.entity_resolution_features")
+    canonical_game_count = repository.count_rows("dm.canonical_games")
+    canonical_source_link_count = repository.count_rows("dm.canonical_game_sources")
     validation.counts["candidate_pair_count"] = candidate_pair_count
     validation.counts["feature_base_count"] = feature_count
+    validation.counts["canonical_game_count"] = canonical_game_count
+    validation.counts["canonical_source_link_count"] = canonical_source_link_count
     if candidate_pair_count == 0 and not allow_empty and not allow_missing_artifacts:
         validation.errors.append("candidate pairs missing")
     if feature_count == 0 and not allow_empty and not allow_missing_artifacts:
         validation.errors.append("feature base missing")
+    if canonical_game_count == 0 and not allow_empty and not allow_missing_artifacts:
+        validation.errors.append("canonical games missing")
+    if canonical_source_link_count == 0 and not allow_empty and not allow_missing_artifacts:
+        validation.errors.append("canonical source links missing")
 
     deterministic_positive_count = len(
         [

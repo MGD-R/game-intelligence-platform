@@ -18,6 +18,8 @@ class ValidationRepositoryStub:
             ("stg.source_game_external_ids", "igdb"): 0,
             ("ml.entity_candidate_pairs", None): 1,
             ("ml.entity_resolution_features", None): 1,
+            ("dm.canonical_games", None): 1,
+            ("dm.canonical_game_sources", None): 2,
         }
 
     def fetch_existing_tables(self, *, schemas: list[str]) -> set[tuple[str, str]]:
@@ -37,6 +39,9 @@ class ValidationRepositoryStub:
             ("ml", "entity_candidate_pairs"),
             ("ml", "entity_resolution_features"),
             ("dm", "canonical_games"),
+            ("dm", "canonical_game_sources"),
+            ("dm", "canonical_game_aliases"),
+            ("dm", "canonical_game_external_ids"),
             ("meta", "pipeline_run_log"),
         }
 

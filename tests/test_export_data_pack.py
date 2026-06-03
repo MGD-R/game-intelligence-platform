@@ -33,6 +33,14 @@ class _ExportRepoStub:
             "raw.rawg_game_index": 1,
             "raw.rawg_game_details": 1,
             "raw.wikidata_entities": 1,
+            "stg.source_games": 2,
+            "stg.source_game_external_ids": 1,
+            "ml.entity_candidate_pairs": 1,
+            "ml.entity_resolution_features": 1,
+            "dm.canonical_games": 1,
+            "dm.canonical_game_sources": 2,
+            "dm.canonical_game_aliases": 1,
+            "dm.canonical_game_external_ids": 1,
         }
         source_counts = {
             ("raw.rawg_game_index", "rawg"): 1,
