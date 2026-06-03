@@ -75,6 +75,90 @@ ORDER BY priority_score DESC, name_similarity ASC NULLS LAST
 LIMIT 200;
 ```
 
+For the current DB-backed queue after model scoring, export a CSV snapshot:
+
+```bash
+make er-export-review-queue
+```
+
+The command writes:
+
+- `data/artifacts/reports/entity_resolution/entity_resolution_manual_review_pending.csv`
+- `data/artifacts/reports/entity_resolution/entity_resolution_manual_review_pending_summary.json`
+
+The CSV is for analysis and tracking only. Edit labels in PostgreSQL table
+`ml.entity_resolution_manual_reviews`, not in the CSV.
+
+General pending review query for all candidate sources:
+
+```sql
+SELECT
+    r.review_id,
+    v.pair_id,
+    v.source_a,
+    v.source_id_a,
+    v.name_a,
+    v.release_year_a,
+    v.rawg_url,
+    v.source_b,
+    v.source_id_b,
+    v.name_b,
+    v.release_year_b,
+    v.igdb_url,
+    v.candidate_source,
+    v.label_source,
+    v.label_value,
+    v.name_similarity,
+    v.alias_similarity,
+    v.release_year_diff,
+    v.same_game_probability,
+    v.model_decision,
+    r.selection_strategy,
+    r.priority_score,
+    r.review_status,
+    r.review_label,
+    r.reviewer,
+    r.review_notes
+FROM ml.entity_resolution_manual_reviews r
+JOIN ml.v_entity_resolution_review_candidates v
+    ON v.pair_id = r.pair_id
+WHERE r.review_status = 'pending'
+ORDER BY
+    r.selection_strategy,
+    r.priority_score DESC,
+    v.name_similarity ASC NULLS LAST
+LIMIT 500;
+```
+
+Use this check to find pending rows that are poor examples for name-based ML:
+
+```sql
+SELECT
+    r.review_id,
+    v.pair_id,
+    v.source_a,
+    v.source_id_a,
+    v.name_a,
+    v.source_b,
+    v.source_id_b,
+    v.name_b,
+    r.selection_strategy
+FROM ml.v_entity_resolution_review_candidates
+JOIN ml.entity_resolution_manual_reviews r
+    ON r.pair_id = v.pair_id
+WHERE r.review_status = 'pending'
+  AND (
+      v.name_a IS NULL
+      OR v.name_b IS NULL
+      OR v.name_a ~ '^Q[0-9]+$'
+      OR v.name_b ~ '^Q[0-9]+$'
+      OR v.name_a ~ '^[0-9]+$'
+      OR v.name_b ~ '^[0-9]+$'
+      OR length(btrim(v.name_a)) <= 2
+      OR length(btrim(v.name_b)) <= 2
+  );
+```
+
 ## Mark a Pair
 
 Positive match:
