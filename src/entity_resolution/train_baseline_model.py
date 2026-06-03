@@ -30,6 +30,7 @@ from src.entity_resolution.io import (
     load_candidate_pairs_frame,
     load_entity_resolution_config,
     load_feature_base_frame,
+    load_reviewed_manual_labels_frame,
     load_source_games_frame,
 )
 from src.entity_resolution.thresholds import decision_from_probability, load_threshold_policy
@@ -67,6 +68,40 @@ def compute_metrics(y_true: list[int], y_pred: list[int], y_prob: list[float]) -
         metrics["pr_auc"] = None
         metrics["warnings"] = ["single-class evaluation set"]
     return metrics
+
+
+def compute_metrics_for_rows(
+    rows: list[dict[str, Any]],
+    y_prob: list[float],
+    *,
+    label_source: str,
+) -> dict[str, Any]:
+    indexes = [
+        index
+        for index, row in enumerate(rows)
+        if str(row.get("training_label_source") or "") == label_source
+    ]
+    if not indexes:
+        return {
+            "label_source": label_source,
+            "row_count": 0,
+            "warnings": [f"no {label_source} rows in evaluation split"],
+        }
+    y_true = [int(rows[index]["label"]) for index in indexes]
+    probabilities = [float(y_prob[index]) for index in indexes]
+    y_pred = [1 if probability >= 0.5 else 0 for probability in probabilities]
+    metrics = compute_metrics(y_true, y_pred, probabilities)
+    metrics["label_source"] = label_source
+    metrics["row_count"] = len(indexes)
+    metrics["positive_label_count"] = int(sum(y_true))
+    metrics["negative_label_count"] = int(len(y_true) - sum(y_true))
+    return metrics
+
+
+def label_source_counts(frame: pl.DataFrame) -> list[dict[str, Any]]:
+    if "training_label_source" not in frame.columns:
+        return []
+    return frame.group_by("training_label_source").len().sort("training_label_source").to_dicts()
 
 
 def maybe_log_mlflow(enabled: bool, metrics: dict[str, Any], model_name: str) -> list[str]:
@@ -124,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         load_candidate_pairs_frame(limit=args.limit),
         load_feature_base_frame(limit=args.limit),
         load_source_games_frame(limit=args.limit),
+        load_reviewed_manual_labels_frame(limit=args.limit),
     )
     if training_frame.is_empty():
         if args.allow_empty:
@@ -174,6 +210,12 @@ def main(argv: list[str] | None = None) -> int:
             "test_row_count": len(test_rows),
             "positive_label_count": int(sum(y)),
             "negative_label_count": int(len(y) - sum(y)),
+            "training_label_source_counts": label_source_counts(training_frame),
+            "test_manual_review_metrics": compute_metrics_for_rows(
+                test_rows,
+                y_prob,
+                label_source="manual_review",
+            ),
         }
     )
     mlflow_warnings = maybe_log_mlflow(args.log_mlflow, metrics, "logistic_regression_baseline")

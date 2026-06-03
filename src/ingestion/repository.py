@@ -994,6 +994,50 @@ class IngestionRepository:
                     ),
                 )
 
+    def upsert_entity_resolution_predictions(
+        self,
+        rows: list[Mapping[str, object]],
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        if not rows:
+            return
+        self.ensure_entity_resolution_predictions_table()
+        query = """
+            INSERT INTO ml.entity_resolution_predictions (
+                pair_id,
+                model_name,
+                model_version,
+                same_game_probability,
+                decision,
+                threshold_policy_json,
+                explanation_factors_json
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (pair_id, model_name, model_version)
+            DO UPDATE
+            SET same_game_probability = EXCLUDED.same_game_probability,
+                decision = EXCLUDED.decision,
+                threshold_policy_json = EXCLUDED.threshold_policy_json,
+                explanation_factors_json = EXCLUDED.explanation_factors_json,
+                predicted_at = NOW()
+        """
+        params = [
+            (
+                str(row["pair_id"]),
+                str(row["model_name"]),
+                str(row["model_version"]),
+                float(row["same_game_probability"]),
+                str(row["decision"]),
+                Jsonb(dict(row.get("threshold_policy_json") or {})),
+                Jsonb(dict(row.get("explanation_factors_json") or {})),
+            )
+            for row in rows
+        ]
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.executemany(query, params)
+
     def fetch_entity_resolution_predictions(
         self,
         *,

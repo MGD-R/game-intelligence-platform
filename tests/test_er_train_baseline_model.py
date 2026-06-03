@@ -105,6 +105,10 @@ def test_train_baseline_model_handles_tiny_fixture_dataset(monkeypatch, tmp_path
         lambda *args, **kwargs: pl.DataFrame(),
     )
     monkeypatch.setattr(
+        "src.entity_resolution.train_baseline_model.load_reviewed_manual_labels_frame",
+        lambda *args, **kwargs: pl.DataFrame(),
+    )
+    monkeypatch.setattr(
         "src.entity_resolution.train_baseline_model.ensure_output_directories",
         lambda: type(
             "P",

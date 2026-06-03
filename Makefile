@@ -10,9 +10,9 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-search-seeds igdb-search igdb-search-candidates igdb-search-demo igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
-	validate-staging validate-ml-data manual-review-seed manual-review-db manual-review-db-seed dataset-manifest export-ml-ready \
+	validate-staging validate-ml-data manual-review-seed manual-review-db manual-review-db-seed canonical-v0 canonical-v1 dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
-	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-review-queue \
+	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-training-report er-review-queue \
 	er-baseline code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
 	recommendations rag demo-data all
 
@@ -270,6 +270,14 @@ manual-review-db-seed:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.seed_manual_review_queue
 
+canonical-v0:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.build_canonical_v0
+
+canonical-v1:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.build_canonical_v0 --version v1
+
 dataset-manifest:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.build_dataset_manifest
@@ -308,6 +316,10 @@ er-predict:
 er-evaluate:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.evaluate_model
+
+er-training-report:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.export_training_report
 
 er-review-queue:
 	$(COMPOSE) up -d postgres

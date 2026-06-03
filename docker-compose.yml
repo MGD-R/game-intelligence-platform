@@ -20,6 +20,7 @@ x-dev-volumes: &dev-volumes
   - ./data:/app/data
   - ./data_packs:/app/data_packs
   - ./docker:/app/docker
+  - ./notebooks:/app/notebooks
   - ./sql:/app/sql
   - ./tests:/app/tests
   - ./pyproject.toml:/app/pyproject.toml:ro

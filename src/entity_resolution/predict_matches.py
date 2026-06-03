@@ -91,7 +91,6 @@ def main(argv: list[str] | None = None) -> int:
     policy = load_threshold_policy()
     policy_json = asdict(policy)
     rows = []
-    repository = IngestionRepository()
     for row, probability in zip(prepared.to_dicts(), probabilities, strict=False):
         decision = decision_from_probability(probability, policy)
         explanation = explanation_from_row(row, feature_names, coefficients)
@@ -106,16 +105,9 @@ def main(argv: list[str] | None = None) -> int:
                 "explanation_factors_json": explanation,
             }
         )
-        repository.upsert_entity_resolution_prediction(
-            pair_id=str(row["pair_id"]),
-            model_name="logistic_regression_baseline",
-            model_version="v1",
-            same_game_probability=float(probability),
-            decision=decision,
-            threshold_policy_json=policy_json,
-            explanation_factors_json=explanation,
-        )
 
+    repository = IngestionRepository()
+    repository.upsert_entity_resolution_predictions(rows)
     write_parquet(output_path, rows)
     print({"output_path": str(output_path), "prediction_count": len(rows)})
     return 0
