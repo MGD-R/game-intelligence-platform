@@ -13,6 +13,7 @@ Run these commands before the defense rehearsal:
 ```bash
 make er-merge-strategy-comparison
 make er-graph-analysis
+make er-embedding-research
 make ml-research-defense
 make bayesian-rating
 ```
@@ -24,6 +25,8 @@ Expected generated artifacts:
 - `data/artifacts/reports/graph_analysis/graph_strategy_summary.csv`
 - `data/artifacts/reports/graph_analysis/risky_components.csv`
 - `data/artifacts/reports/graph_analysis/high_probability_reviewed_negatives.csv`
+- `data/artifacts/reports/embedding_research/embedding_model_comparison.csv`
+- `data/artifacts/reports/embedding_research/embedding_error_cases.csv`
 - `data/artifacts/reports/ml_research_defense/ml_research_defense_summary.json`
 - `data/artifacts/reports/ml_research_defense/ablation_study.csv`
 - `data/artifacts/reports/ml_research_defense/calibration_bins.csv`
@@ -35,6 +38,7 @@ Expected generated artifacts:
 - `data/artifacts/reports/ml_research_defense/charts/merge_strategy_f1.svg`
 - `data/artifacts/reports/ml_research_defense/charts/recommendation_score_distribution.svg`
 - `data/artifacts/reports/graph_analysis/same_source_duplicate_links.svg`
+- `data/artifacts/reports/embedding_research/embedding_model_f1.svg`
 - `data/artifacts/reports/bayesian_rating/bayesian_rating_summary.md`
 - `data/artifacts/reports/bayesian_rating/canonical_bayesian_ratings.csv`
 - `data/artifacts/reports/bayesian_rating/low_vote_shrinkage_examples.csv`
@@ -205,7 +209,37 @@ Evidence:
 - `high_probability_reviewed_negatives.csv`
 - `same_source_duplicate_links.svg`
 
-### 8. Active Learning Casebook
+### 8. Lightweight Title Embedding Research
+
+Message:
+
+> Before using heavy neural embeddings, the project tests a reproducible local
+> embedding-style baseline: TF-IDF/SVD title vectors. This shows whether vector
+> similarity adds value over fuzzy name similarity.
+
+Show:
+
+- model comparison table;
+- threshold evaluation;
+- embedding error cases;
+- F1 chart.
+
+Current snapshot:
+
+- `1,966` reviewed pairs.
+- Best model: `combined_name_embedding_year`.
+- Best F1: `0.974026`.
+- `name_similarity_only` F1: `0.950872`.
+- Error-case rows: `35`.
+
+Evidence:
+
+- `embedding_model_comparison.csv`
+- `embedding_threshold_eval.csv`
+- `embedding_error_cases.csv`
+- `embedding_model_f1.svg`
+
+### 9. Active Learning Casebook
 
 Message:
 
@@ -223,7 +257,7 @@ Evidence:
 - `active_learning_candidates.csv`
 - `defense_demo_cases.csv`
 
-### 9. Recommendations As Secondary ML Block
+### 10. Recommendations As Secondary ML Block
 
 Message:
 
@@ -245,7 +279,7 @@ Evidence:
 - `charts/recommendation_score_distribution.svg`
 - `dm.game_recommendations`
 
-### 10. Bayesian Rating As Secondary Statistics Block
+### 11. Bayesian Rating As Secondary Statistics Block
 
 Message:
 
@@ -281,10 +315,11 @@ Evidence:
 | Why not use model auto-merge directly? | Because ER errors are costly and transitive in canonical clusters; model outputs should be governed by thresholds and manual review. |
 | Why are negative labels needed? | They teach the model franchise/remaster/DLC boundaries and prevent similar titles from being merged blindly. |
 | Why graph analysis? | It reveals component-level and transitive merge risks that pair-level metrics can hide. |
-| Why Logistic Regression? | It is interpretable, fast, reproducible and sufficient for a strong baseline before embeddings. |
+| Why lightweight embeddings? | They show the value of vector similarity without requiring non-reproducible external model downloads. |
+| Why Logistic Regression? | It is interpretable, fast, reproducible and sufficient for a strong baseline before neural embeddings. |
 | Is recommendation ML complete? | It is a content-based baseline. Collaborative filtering is out of scope without user interaction data. |
 | Why Bayesian rating? | It reduces ranking noise from low-vote source ratings and demonstrates a separate statistical ML block on top of canonical data. |
-| What is next? | Multilingual embeddings, better IGDB candidate quality, calibrated thresholds and grounded RAG explanations. |
+| What is next? | Multilingual neural embeddings, better IGDB candidate quality, calibrated thresholds and grounded RAG explanations. |
 
 ## Final Defense Claim
 

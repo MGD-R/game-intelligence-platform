@@ -48,8 +48,9 @@ Numeric feature groups:
 - description availability and language flags;
 - source-count signal.
 
-Embeddings are intentionally not part of this baseline. They are planned as the next
-research extension.
+Neural embeddings are intentionally not part of the production baseline. A separate
+lightweight research lane now evaluates local TF-IDF/SVD title vectors against fuzzy
+title similarity.
 
 ## Model
 
@@ -129,6 +130,32 @@ Known limitations:
 - Vote counts can be source-specific and may not represent the same user population.
 - The default prior `50` is a research setting and should be tuned before production use.
 
+## Secondary Research Block: Lightweight Title Embeddings
+
+The project includes a reproducible title embedding experiment based on local TF-IDF/SVD
+vectors. It does not download sentence-transformer or other external neural models.
+
+Current generated snapshot:
+
+- Reviewed pairs: `1,966`.
+- Positive labels: `1,029`.
+- Negative labels: `937`.
+- Best model: `combined_name_embedding_year`.
+- Best F1: `0.974026`.
+- `name_similarity_only` F1: `0.950872`.
+
+Purpose:
+
+- compare vector similarity with fuzzy title similarity;
+- demonstrate the value of embedding-style features for ER;
+- collect high-risk remaster/edition/franchise error cases for manual review.
+
+Known limitations:
+
+- TF-IDF/SVD title vectors are not semantic multilingual neural embeddings.
+- The experiment uses reviewed ER pairs only and does not change canonical merge policy.
+- External neural embeddings remain a future research extension.
+
 ## Intended Use
 
 Recommended:
@@ -146,7 +173,7 @@ Not recommended:
 
 ## Next Steps
 
-- Add multilingual title/description embeddings.
+- Add multilingual neural title/description embeddings.
 - Add calibration plots and threshold governance to the presentation notebook.
 - Improve IGDB-specific candidate quality and alias coverage.
 - Use graph analysis outputs to review same-source duplicate components before expanding

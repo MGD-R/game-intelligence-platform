@@ -13,8 +13,9 @@ Recommended workflow:
 2. Open the `data/processed` parquet snapshots.
 3. Run `make er-merge-strategy-comparison`.
 4. Run `make er-graph-analysis`.
-5. Run `make ml-research-defense`.
-6. Run `make bayesian-rating`.
-7. Review `data/artifacts/reports` and `data/artifacts/manifests`.
+5. Run `make er-embedding-research`.
+6. Run `make ml-research-defense`.
+7. Run `make bayesian-rating`.
+8. Review `data/artifacts/reports` and `data/artifacts/manifests`.
 
 Keep notebook outputs lightweight and do not commit executed outputs or large generated artifacts.

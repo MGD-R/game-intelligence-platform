@@ -35,6 +35,8 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - Data-quality impact через source coverage, missingness, conflicts и risky cases.
    - Graph analysis: connected components, same-source conflicts, source bridge edges,
      risky clusters and high-probability reviewed negatives.
+   - Lightweight title embeddings: TF-IDF/SVD cosine similarities and Logistic Regression
+     comparison against fuzzy `name_similarity`.
 
 4. **Recommendations as secondary ML block**
    - Использовать `content_jaccard_v1` как explainable baseline.
@@ -54,6 +56,9 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `graph_strategy_summary.csv`, `risky_components.csv`,
      `high_probability_reviewed_negatives.csv` и `same_source_duplicate_links.svg`
      для анализа transitive ER risk.
+   - `embedding_model_comparison.csv`, `embedding_threshold_eval.csv`,
+     `embedding_error_cases.csv` и `embedding_model_f1.svg` для title embedding
+     research lane.
    - `bayesian_rating_summary.md`, `canonical_bayesian_ratings.csv`,
      `low_vote_shrinkage_examples.csv` и `top_bayesian_ratings.svg` для демонстрации
      naive-vs-Bayesian ranking.
@@ -67,6 +72,7 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
 ```bash
 make er-merge-strategy-comparison
 make er-graph-analysis
+make er-embedding-research
 make ml-research-defense
 make bayesian-rating
 ```
@@ -76,6 +82,7 @@ Direct module command:
 ```bash
 python -m src.entity_resolution.build_research_defense_artifacts
 python -m src.entity_resolution.build_graph_analysis
+python -m src.entity_resolution.build_embedding_research
 python -m src.recommendations.build_bayesian_rating_analysis
 ```
 
@@ -83,6 +90,6 @@ python -m src.recommendations.build_bayesian_rating_analysis
 
 - Production `dm.canonical_*` не меняется модельными auto-merge без отдельного решения.
 - Основной фокус - объяснимый ER baseline и сильный research narrative.
-- Heavy embeddings/RAG остаются следующими направлениями; Bayesian rating реализован как
-  lightweight secondary research lane.
+- Heavy neural embeddings/RAG остаются следующими направлениями; lightweight TF-IDF/SVD
+  title embeddings and Bayesian rating реализованы как secondary research lanes.
 - Сгенерированные data artifacts остаются вне Git.
