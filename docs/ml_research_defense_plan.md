@@ -38,6 +38,9 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - Использовать `content_jaccard_v1` как explainable baseline.
    - Показать coverage, score distribution и shared-feature explanations.
    - Зафиксировать ограничение: нет user interactions, значит это не collaborative filtering.
+   - Дополнить secondary ML/statistics блоком `Bayesian rating`: сравнить naive
+     weighted ratings и Bayesian-adjusted ratings для canonical games с малым и большим
+     числом голосов.
 
 5. **Defense artifacts**
    - `docs/ml_research_findings.md`.
@@ -46,6 +49,9 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `notebooks/03_ml_research_defense_report.ipynb`.
    - `defense_demo_cases.csv` для live-сценария защиты.
    - `recommendation_score_distribution.csv` для анализа baseline-рекомендаций.
+   - `bayesian_rating_summary.md`, `canonical_bayesian_ratings.csv`,
+     `low_vote_shrinkage_examples.csv` и `top_bayesian_ratings.svg` для демонстрации
+     naive-vs-Bayesian ranking.
    - SVG-графики для презентации: ablation, calibration, merge strategies,
      recommendation score distribution.
    - Runtime artifacts:
@@ -56,17 +62,20 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
 ```bash
 make er-merge-strategy-comparison
 make ml-research-defense
+make bayesian-rating
 ```
 
 Direct module command:
 
 ```bash
 python -m src.entity_resolution.build_research_defense_artifacts
+python -m src.recommendations.build_bayesian_rating_analysis
 ```
 
 ## Assumptions
 
 - Production `dm.canonical_*` не меняется модельными auto-merge без отдельного решения.
 - Основной фокус - объяснимый ER baseline и сильный research narrative.
-- Heavy embeddings/RAG/Bayesian rating остаются следующими направлениями.
+- Heavy embeddings/RAG остаются следующими направлениями; Bayesian rating реализован как
+  lightweight secondary research lane.
 - Сгенерированные data artifacts остаются вне Git.

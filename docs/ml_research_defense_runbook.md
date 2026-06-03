@@ -13,6 +13,7 @@ Run these commands before the defense rehearsal:
 ```bash
 make er-merge-strategy-comparison
 make ml-research-defense
+make bayesian-rating
 ```
 
 Expected generated artifacts:
@@ -29,6 +30,10 @@ Expected generated artifacts:
 - `data/artifacts/reports/ml_research_defense/charts/calibration_bins.svg`
 - `data/artifacts/reports/ml_research_defense/charts/merge_strategy_f1.svg`
 - `data/artifacts/reports/ml_research_defense/charts/recommendation_score_distribution.svg`
+- `data/artifacts/reports/bayesian_rating/bayesian_rating_summary.md`
+- `data/artifacts/reports/bayesian_rating/canonical_bayesian_ratings.csv`
+- `data/artifacts/reports/bayesian_rating/low_vote_shrinkage_examples.csv`
+- `data/artifacts/reports/bayesian_rating/top_bayesian_ratings.svg`
 
 Open for presentation:
 
@@ -206,6 +211,35 @@ Evidence:
 - `charts/recommendation_score_distribution.svg`
 - `dm.game_recommendations`
 
+### 9. Bayesian Rating As Secondary Statistics Block
+
+Message:
+
+> Naive source ratings are useful but biased toward games with few votes. Bayesian
+> adjustment shrinks low-vote outliers toward the global mean and gives a more
+> stable ranking signal for canonical games.
+
+Show:
+
+- top Bayesian-adjusted games;
+- low-vote shrinkage examples;
+- source rating coverage by source/rating type;
+- formula and prior choice.
+
+Current snapshot:
+
+- `24,344` vote-backed rating inputs.
+- `14,468` canonical games with Bayesian ratings.
+- Global weighted mean: `78.527138`.
+- Prior votes: `50.0`.
+
+Evidence:
+
+- `bayesian_rating_summary.md`
+- `canonical_bayesian_ratings.csv`
+- `low_vote_shrinkage_examples.csv`
+- `top_bayesian_ratings.svg`
+
 ## Questions To Be Ready For
 
 | Question | Short answer |
@@ -214,7 +248,8 @@ Evidence:
 | Why are negative labels needed? | They teach the model franchise/remaster/DLC boundaries and prevent similar titles from being merged blindly. |
 | Why Logistic Regression? | It is interpretable, fast, reproducible and sufficient for a strong baseline before embeddings. |
 | Is recommendation ML complete? | It is a content-based baseline. Collaborative filtering is out of scope without user interaction data. |
-| What is next? | Multilingual embeddings, better IGDB candidate quality, calibrated thresholds, Bayesian rating and grounded RAG explanations. |
+| Why Bayesian rating? | It reduces ranking noise from low-vote source ratings and demonstrates a separate statistical ML block on top of canonical data. |
+| What is next? | Multilingual embeddings, better IGDB candidate quality, calibrated thresholds and grounded RAG explanations. |
 
 ## Final Defense Claim
 

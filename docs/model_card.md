@@ -96,6 +96,37 @@ Manual threshold analysis shows:
 - Some source records still contain QID-like or low-quality names.
 - Recommendations are content-based only and do not use user interaction data.
 
+## Secondary Research Block: Bayesian Rating
+
+The project also includes a lightweight Bayesian rating analysis for canonical games.
+This is not an Entity Resolution model and does not change canonical merges.
+
+Purpose:
+
+- compare naive source ratings with vote-adjusted ratings;
+- reduce ranking noise from games with very few votes;
+- demonstrate an additional interpretable ML/statistics method for the defense.
+
+Current generated snapshot:
+
+- Rating inputs: `24,344`.
+- Canonical games with vote-backed ratings: `14,468`.
+- Global weighted mean: `78.527138`.
+- Prior votes: `50.0`.
+
+Formula:
+
+```text
+bayesian_rating = (votes * naive_rating + prior_votes * global_mean)
+                  / (votes + prior_votes)
+```
+
+Known limitations:
+
+- Source ratings are not equally calibrated across RAWG and IGDB.
+- Vote counts can be source-specific and may not represent the same user population.
+- The default prior `50` is a research setting and should be tuned before production use.
+
 ## Intended Use
 
 Recommended:
@@ -116,4 +147,4 @@ Not recommended:
 - Add multilingual title/description embeddings.
 - Add calibration plots and threshold governance to the presentation notebook.
 - Improve IGDB-specific candidate quality and alias coverage.
-- Add Bayesian rating and grounded RAG explanations as secondary research tracks.
+- Tune Bayesian rating prior and add grounded RAG explanations as secondary research tracks.
