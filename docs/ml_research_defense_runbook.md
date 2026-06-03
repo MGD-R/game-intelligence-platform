@@ -12,6 +12,7 @@ Run these commands before the defense rehearsal:
 
 ```bash
 make er-merge-strategy-comparison
+make er-graph-analysis
 make ml-research-defense
 make bayesian-rating
 ```
@@ -20,6 +21,9 @@ Expected generated artifacts:
 
 - `data/artifacts/reports/entity_resolution/merge_strategies/merge_strategy_comparison.csv`
 - `data/artifacts/reports/entity_resolution/merge_strategies/model_auto_merge_candidates.csv`
+- `data/artifacts/reports/graph_analysis/graph_strategy_summary.csv`
+- `data/artifacts/reports/graph_analysis/risky_components.csv`
+- `data/artifacts/reports/graph_analysis/high_probability_reviewed_negatives.csv`
 - `data/artifacts/reports/ml_research_defense/ml_research_defense_summary.json`
 - `data/artifacts/reports/ml_research_defense/ablation_study.csv`
 - `data/artifacts/reports/ml_research_defense/calibration_bins.csv`
@@ -30,6 +34,7 @@ Expected generated artifacts:
 - `data/artifacts/reports/ml_research_defense/charts/calibration_bins.svg`
 - `data/artifacts/reports/ml_research_defense/charts/merge_strategy_f1.svg`
 - `data/artifacts/reports/ml_research_defense/charts/recommendation_score_distribution.svg`
+- `data/artifacts/reports/graph_analysis/same_source_duplicate_links.svg`
 - `data/artifacts/reports/bayesian_rating/bayesian_rating_summary.md`
 - `data/artifacts/reports/bayesian_rating/canonical_bayesian_ratings.csv`
 - `data/artifacts/reports/bayesian_rating/low_vote_shrinkage_examples.csv`
@@ -171,7 +176,36 @@ Evidence:
 - `charts/ablation_f1.svg`
 - `charts/calibration_bins.svg`
 
-### 7. Active Learning Casebook
+### 7. ER Graph Analysis
+
+Message:
+
+> Entity Resolution errors are transitive: one bad edge can pull several records into
+> the same canonical component. Graph analysis makes this risk visible before any
+> production canonical merge policy is changed.
+
+Show:
+
+- strategy-level component counts;
+- same-source duplicate links;
+- risky components;
+- high-probability reviewed negatives.
+
+Current snapshot:
+
+- `248` risky components exported across strategies.
+- `28` high-probability reviewed negatives.
+- `model_auto_070_research`: `516` same-source duplicate links.
+- `hybrid_safe_090`: `42` same-source duplicate links.
+
+Evidence:
+
+- `graph_strategy_summary.csv`
+- `risky_components.csv`
+- `high_probability_reviewed_negatives.csv`
+- `same_source_duplicate_links.svg`
+
+### 8. Active Learning Casebook
 
 Message:
 
@@ -189,7 +223,7 @@ Evidence:
 - `active_learning_candidates.csv`
 - `defense_demo_cases.csv`
 
-### 8. Recommendations As Secondary ML Block
+### 9. Recommendations As Secondary ML Block
 
 Message:
 
@@ -211,7 +245,7 @@ Evidence:
 - `charts/recommendation_score_distribution.svg`
 - `dm.game_recommendations`
 
-### 9. Bayesian Rating As Secondary Statistics Block
+### 10. Bayesian Rating As Secondary Statistics Block
 
 Message:
 
@@ -246,6 +280,7 @@ Evidence:
 |---|---|
 | Why not use model auto-merge directly? | Because ER errors are costly and transitive in canonical clusters; model outputs should be governed by thresholds and manual review. |
 | Why are negative labels needed? | They teach the model franchise/remaster/DLC boundaries and prevent similar titles from being merged blindly. |
+| Why graph analysis? | It reveals component-level and transitive merge risks that pair-level metrics can hide. |
 | Why Logistic Regression? | It is interpretable, fast, reproducible and sufficient for a strong baseline before embeddings. |
 | Is recommendation ML complete? | It is a content-based baseline. Collaborative filtering is out of scope without user interaction data. |
 | Why Bayesian rating? | It reduces ranking noise from low-vote source ratings and demonstrates a separate statistical ML block on top of canonical data. |

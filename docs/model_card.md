@@ -95,6 +95,8 @@ Manual threshold analysis shows:
 - Remasters, editions, DLCs and franchise titles remain high-risk cases.
 - Some source records still contain QID-like or low-quality names.
 - Recommendations are content-based only and do not use user interaction data.
+- Pair-level metrics do not fully capture transitive graph risk; component-level analysis is
+  required before any model-assisted production merge policy.
 
 ## Secondary Research Block: Bayesian Rating
 
@@ -147,4 +149,6 @@ Not recommended:
 - Add multilingual title/description embeddings.
 - Add calibration plots and threshold governance to the presentation notebook.
 - Improve IGDB-specific candidate quality and alias coverage.
+- Use graph analysis outputs to review same-source duplicate components before expanding
+  canonical merge policy.
 - Tune Bayesian rating prior and add grounded RAG explanations as secondary research tracks.

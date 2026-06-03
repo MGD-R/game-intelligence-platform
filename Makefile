@@ -13,7 +13,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	validate-staging validate-ml-data manual-review-seed manual-review-db manual-review-db-seed canonical-v0 canonical-v1 dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-training-report er-review-queue er-export-review-queue \
-	er-baseline er-merge-strategy-comparison ml-research-defense code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
+	er-baseline er-merge-strategy-comparison er-graph-analysis ml-research-defense code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
 	recommendations bayesian-rating rag demo-data all
 
 DATA_PACK ?= data_packs/gip_demo_local
@@ -336,6 +336,10 @@ er-baseline:
 er-merge-strategy-comparison:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.compare_merge_strategies
+
+er-graph-analysis:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.entity_resolution.build_graph_analysis
 
 ml-research-defense:
 	$(COMPOSE) up -d postgres
