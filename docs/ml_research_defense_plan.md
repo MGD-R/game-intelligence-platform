@@ -43,6 +43,8 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `docs/ml_research_findings.md`.
    - `docs/model_card.md`.
    - `notebooks/03_ml_research_defense_report.ipynb`.
+   - `defense_demo_cases.csv` для live-сценария защиты.
+   - `recommendation_score_distribution.csv` для анализа baseline-рекомендаций.
    - Runtime artifacts:
      `data/artifacts/reports/ml_research_defense/`.
 

@@ -377,6 +377,81 @@ def fetch_active_learning_candidates(repository: IngestionRepository) -> list[di
     )
 
 
+def fetch_defense_demo_cases(repository: IngestionRepository) -> list[dict[str, Any]]:
+    er_cases = fetch_rows(
+        repository,
+        """
+        (
+            SELECT
+                'successful_merge' AS case_type,
+                name_a AS item_a,
+                name_b AS item_b,
+                same_game_probability AS score,
+                'High-confidence reviewed positive ER pair' AS interpretation
+            FROM ml.v_entity_resolution_review_candidates
+            WHERE review_status = 'reviewed'
+              AND review_label IS TRUE
+            ORDER BY same_game_probability DESC NULLS LAST
+            LIMIT 3
+        )
+        UNION ALL
+        (
+            SELECT
+                'rejected_risky_match' AS case_type,
+                name_a AS item_a,
+                name_b AS item_b,
+                same_game_probability AS score,
+                'Reviewed negative: similar title but different game/entity' AS interpretation
+            FROM ml.v_entity_resolution_review_candidates
+            WHERE review_status = 'reviewed'
+              AND review_label IS FALSE
+            ORDER BY same_game_probability DESC NULLS LAST
+            LIMIT 3
+        )
+        UNION ALL
+        (
+            SELECT
+                'active_learning_candidate' AS case_type,
+                name_a AS item_a,
+                name_b AS item_b,
+                same_game_probability AS score,
+                'Unlabeled high-uncertainty pair for the next manual-review batch'
+                    AS interpretation
+            FROM ml.v_entity_resolution_review_candidates
+            WHERE review_status IS NULL
+               OR review_status IN ('pending', 'unsure', 'skipped')
+            ORDER BY ABS(COALESCE(same_game_probability, 0.5) - 0.5),
+                     same_game_probability DESC NULLS LAST
+            LIMIT 3
+        )
+        ORDER BY case_type, score DESC NULLS LAST
+        """,
+    )
+    recommendation_cases = fetch_rows(
+        repository,
+        """
+        SELECT
+            'recommendation_example' AS case_type,
+            seed.canonical_name AS item_a,
+            rec.canonical_name AS item_b,
+            r.score,
+            'Content-based recommendation with 3+ shared explanation features'
+                AS interpretation
+        FROM dm.game_recommendations r
+        JOIN dm.canonical_games seed
+            ON seed.canonical_game_id = r.canonical_game_id
+        JOIN dm.canonical_games rec
+            ON rec.canonical_game_id = r.recommended_canonical_game_id
+        WHERE jsonb_array_length(r.explanation_factors_json->'shared_features') >= 3
+          AND seed.canonical_name !~ '^Q[0-9]+$'
+          AND rec.canonical_name !~ '^Q[0-9]+$'
+        ORDER BY r.score DESC, seed.canonical_name, rec.canonical_name
+        LIMIT 5
+        """,
+    )
+    return er_cases + recommendation_cases
+
+
 def fetch_recommendation_examples(repository: IngestionRepository) -> dict[str, Any]:
     coverage = fetch_rows(
         repository,
@@ -393,31 +468,43 @@ def fetch_recommendation_examples(repository: IngestionRepository) -> dict[str, 
     examples = fetch_rows(
         repository,
         """
-        WITH ranked_seeds AS (
-            SELECT canonical_game_id, AVG(score) AS avg_score
-            FROM dm.game_recommendations
-            GROUP BY canonical_game_id
-            ORDER BY avg_score DESC, canonical_game_id
-            LIMIT 10
-        )
         SELECT
             seed.canonical_name AS seed_game,
             rec_game.canonical_name AS recommended_game,
             r.rank,
             r.score,
             r.explanation_factors_json::TEXT AS explanation_factors_json
-        FROM ranked_seeds s
+        FROM dm.game_recommendations r
         JOIN dm.canonical_games seed
-            ON seed.canonical_game_id = s.canonical_game_id
-        JOIN dm.game_recommendations r
-            ON r.canonical_game_id = s.canonical_game_id
-           AND r.rank <= 3
+            ON seed.canonical_game_id = r.canonical_game_id
         JOIN dm.canonical_games rec_game
             ON rec_game.canonical_game_id = r.recommended_canonical_game_id
-        ORDER BY seed.canonical_name, r.rank
+        WHERE jsonb_array_length(r.explanation_factors_json->'shared_features') >= 3
+          AND seed.canonical_name !~ '^Q[0-9]+$'
+          AND rec_game.canonical_name !~ '^Q[0-9]+$'
+        ORDER BY r.score DESC, seed.canonical_name, r.rank
+        LIMIT 25
         """,
     )
-    return {"coverage": coverage, "examples": examples}
+    score_distribution = fetch_rows(
+        repository,
+        """
+        SELECT
+            CASE
+                WHEN score >= 1.0 THEN '1.0'
+                ELSE CONCAT(
+                    ROUND((FLOOR(score * 10) / 10)::NUMERIC, 1),
+                    '-',
+                    ROUND(((FLOOR(score * 10) + 1) / 10)::NUMERIC, 1)
+                )
+            END AS score_bucket,
+            COUNT(*) AS row_count
+        FROM dm.game_recommendations
+        GROUP BY score_bucket
+        ORDER BY score_bucket
+        """,
+    )
+    return {"coverage": coverage, "examples": examples, "score_distribution": score_distribution}
 
 
 def read_optional_json(path: Path) -> Any:
@@ -466,6 +553,7 @@ def write_markdown_summary(path: Path, summary: dict[str, Any]) -> None:
     ablation_rows = summary["ablation_study"]
     calibration = summary["calibration"]
     recommendations = summary["recommendations"]
+    defense_demo_case_count = summary["defense_demo_case_count"]
     data_quality = summary["data_quality"]
     lines = [
         "# ML Research Defense Runtime Summary",
@@ -501,6 +589,8 @@ def write_markdown_summary(path: Path, summary: dict[str, Any]) -> None:
             "",
             f"- Coverage: `{recommendations['coverage']}`",
             f"- Example rows: `{len(recommendations['examples'])}`",
+            f"- Score distribution: `{recommendations['score_distribution']}`",
+            f"- Defense demo cases: `{defense_demo_case_count}`",
             "",
             "## Data Quality Impact",
             "",
@@ -527,6 +617,7 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
     calibration = build_calibration_report(training_frame)
     active_learning_candidates = fetch_active_learning_candidates(repository)
     recommendations = fetch_recommendation_examples(repository)
+    defense_demo_cases = fetch_defense_demo_cases(repository)
     existing_er_artifacts = load_existing_er_artifacts()
     data_quality = load_data_quality_artifacts()
     summary = {
@@ -540,6 +631,7 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
         "ablation_study": ablation_rows,
         "calibration": calibration,
         "active_learning_candidate_count": len(active_learning_candidates),
+        "defense_demo_case_count": len(defense_demo_cases),
         "recommendations": recommendations,
         "existing_er_artifacts": existing_er_artifacts,
         "data_quality": data_quality,
@@ -554,13 +646,19 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
         calibration["probability_distribution"],
     )
     write_csv(output_dir / "active_learning_candidates.csv", active_learning_candidates)
+    write_csv(output_dir / "defense_demo_cases.csv", defense_demo_cases)
     write_csv(output_dir / "recommendation_examples.csv", recommendations["examples"])
+    write_csv(
+        output_dir / "recommendation_score_distribution.csv",
+        recommendations["score_distribution"],
+    )
     write_markdown_summary(output_dir / "ml_research_defense_summary.md", summary)
     return {
         "output_dir": str(output_dir),
         "summary_json": str(output_dir / "ml_research_defense_summary.json"),
         "ablation_rows": len(ablation_rows),
         "active_learning_candidate_count": len(active_learning_candidates),
+        "defense_demo_case_count": len(defense_demo_cases),
         "recommendation_example_count": len(recommendations["examples"]),
     }
 

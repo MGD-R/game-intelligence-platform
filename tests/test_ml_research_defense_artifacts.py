@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from src.entity_resolution import build_research_defense_artifacts as module
@@ -13,6 +15,12 @@ def test_quantile_interpolates_sorted_values() -> None:
 def test_round_or_none_handles_missing_values() -> None:
     assert module.round_or_none(None) is None
     assert module.round_or_none(0.123456789) == 0.123457
+
+
+def test_to_jsonable_converts_decimal_values() -> None:
+    payload = {"score": Decimal("0.123"), "rows": [{"value": Decimal("2")}]}
+
+    assert module.to_jsonable(payload) == {"score": 0.123, "rows": [{"value": 2.0}]}
 
 
 def test_selected_feature_names_excludes_requested_group(monkeypatch: pytest.MonkeyPatch) -> None:

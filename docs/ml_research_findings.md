@@ -97,6 +97,13 @@ Active-learning candidates for next manual review:
 | Quake III Arena | Quake III: Team Arena | `0.500612` | Expansion/base-game ambiguity. |
 | Remnant 2 | Remnant II | `0.500723` | Naming variant candidate. |
 
+Generated casebook:
+
+- `defense_demo_cases.csv` combines successful merges, rejected risky matches,
+  active-learning candidates and recommendation examples.
+- This file is intended as the live defense script: it gives concrete records to discuss
+  without searching the database during presentation.
+
 ## Recommendations Baseline
 
 `content_jaccard_v1` построен как explainable baseline без user interactions:
@@ -105,6 +112,8 @@ Active-learning candidates for next manual review:
 - `16,500` canonical games with recommendations.
 - Score range: `0.150000` - `1.000000`.
 - Average score: `0.374520`.
+- Score distribution is generated in `recommendation_score_distribution.csv`.
+- Curated recommendation examples are generated in `recommendation_examples.csv`.
 
 Ограничение для защиты: это content-based recommender, а не collaborative filtering.
 Некоторые примеры с высоким score выявляют ограничения feature baseline: e-reader cards,
@@ -138,4 +147,6 @@ Main outputs:
 - `data/artifacts/reports/ml_research_defense/ablation_study.csv`
 - `data/artifacts/reports/ml_research_defense/calibration_bins.csv`
 - `data/artifacts/reports/ml_research_defense/active_learning_candidates.csv`
+- `data/artifacts/reports/ml_research_defense/defense_demo_cases.csv`
 - `data/artifacts/reports/ml_research_defense/recommendation_examples.csv`
+- `data/artifacts/reports/ml_research_defense/recommendation_score_distribution.csv`
