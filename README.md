@@ -39,6 +39,7 @@ ML-ready datasets and final data-stage build: [docs/ml_ready_datasets.md](docs/m
 Entity Resolution baseline: [docs/entity_resolution_baseline.md](docs/entity_resolution_baseline.md).
 ML research defense plan: [docs/ml_research_defense_plan.md](docs/ml_research_defense_plan.md).
 ML research findings: [docs/ml_research_findings.md](docs/ml_research_findings.md).
+ML research defense runbook: [docs/ml_research_defense_runbook.md](docs/ml_research_defense_runbook.md).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
 IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
