@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import json
 import warnings
 from collections import defaultdict
@@ -100,11 +101,140 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
+def write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def fetch_rows(repository: IngestionRepository, query: str) -> list[dict[str, Any]]:
     with repository.connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(query)
             return list(cursor.fetchall())
+
+
+def numeric_value(row: dict[str, object], key: str) -> float:
+    value = row.get(key)
+    if value in (None, ""):
+        return 0.0
+    return float(value)
+
+
+def short_label(value: object, max_length: int = 32) -> str:
+    text = str(value)
+    return text if len(text) <= max_length else text[: max_length - 1] + "…"
+
+
+def horizontal_bar_chart_svg(
+    rows: list[dict[str, object]],
+    *,
+    title: str,
+    label_key: str,
+    value_key: str,
+    value_label: str,
+    width: int = 1100,
+    row_height: int = 34,
+) -> str:
+    chart_rows = rows or [{label_key: "no data", value_key: 0}]
+    left_margin = 300
+    right_margin = 80
+    top_margin = 70
+    bottom_margin = 45
+    bar_area_width = width - left_margin - right_margin
+    height = top_margin + bottom_margin + row_height * len(chart_rows)
+    max_value = max(numeric_value(row, value_key) for row in chart_rows) or 1.0
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}">',
+        "<style>"
+        "text{font-family:Arial,Helvetica,sans-serif;fill:#1f2937}"
+        ".title{font-size:24px;font-weight:700}"
+        ".label{font-size:14px}"
+        ".value{font-size:13px;fill:#374151}"
+        ".axis{stroke:#d1d5db;stroke-width:1}"
+        "</style>",
+        f'<rect width="{width}" height="{height}" fill="#f8fafc"/>',
+        f'<text x="28" y="38" class="title">{html.escape(title)}</text>',
+        f'<text x="{left_margin}" y="58" class="value">{html.escape(value_label)}</text>',
+    ]
+    for index, row in enumerate(chart_rows):
+        y = top_margin + index * row_height
+        value = numeric_value(row, value_key)
+        bar_width = (value / max_value) * bar_area_width
+        label = html.escape(short_label(row.get(label_key, "")))
+        parts.extend(
+            [
+                f'<text x="28" y="{y + 20}" class="label">{label}</text>',
+                f'<rect x="{left_margin}" y="{y + 5}" width="{bar_width:.2f}" '
+                f'height="20" rx="4" fill="#2563eb"/>',
+                f'<text x="{left_margin + bar_width + 8:.2f}" y="{y + 20}" '
+                f'class="value">{value:.6g}</text>',
+            ]
+        )
+    parts.append(
+        f'<line x1="{left_margin}" y1="62" x2="{left_margin}" y2="{height - 32}" class="axis"/>'
+    )
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
+def paired_bar_chart_svg(
+    rows: list[dict[str, object]],
+    *,
+    title: str,
+    label_key: str,
+    first_key: str,
+    second_key: str,
+    first_label: str,
+    second_label: str,
+    width: int = 1100,
+    row_height: int = 40,
+) -> str:
+    chart_rows = rows or [{label_key: "no data", first_key: 0, second_key: 0}]
+    left_margin = 170
+    right_margin = 80
+    top_margin = 85
+    bottom_margin = 45
+    bar_area_width = width - left_margin - right_margin
+    height = top_margin + bottom_margin + row_height * len(chart_rows)
+    max_value = (
+        max(
+            max(numeric_value(row, first_key), numeric_value(row, second_key)) for row in chart_rows
+        )
+        or 1.0
+    )
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}">',
+        "<style>"
+        "text{font-family:Arial,Helvetica,sans-serif;fill:#1f2937}"
+        ".title{font-size:24px;font-weight:700}"
+        ".label{font-size:13px}"
+        ".value{font-size:12px;fill:#374151}"
+        "</style>",
+        f'<rect width="{width}" height="{height}" fill="#f8fafc"/>',
+        f'<text x="28" y="38" class="title">{html.escape(title)}</text>',
+        f'<rect x="{left_margin}" y="55" width="14" height="14" fill="#2563eb"/>',
+        f'<text x="{left_margin + 20}" y="67" class="value">{html.escape(first_label)}</text>',
+        f'<rect x="{left_margin + 210}" y="55" width="14" height="14" fill="#f97316"/>',
+        f'<text x="{left_margin + 230}" y="67" class="value">{html.escape(second_label)}</text>',
+    ]
+    for index, row in enumerate(chart_rows):
+        y = top_margin + index * row_height
+        first = numeric_value(row, first_key)
+        second = numeric_value(row, second_key)
+        first_width = (first / max_value) * bar_area_width
+        second_width = (second / max_value) * bar_area_width
+        label = html.escape(short_label(row.get(label_key, ""), max_length=18))
+        parts.extend(
+            [
+                f'<text x="28" y="{y + 24}" class="label">{label}</text>',
+                f'<rect x="{left_margin}" y="{y + 5}" width="{first_width:.2f}" '
+                f'height="12" rx="3" fill="#2563eb"/>',
+                f'<rect x="{left_margin}" y="{y + 22}" width="{second_width:.2f}" '
+                f'height="12" rx="3" fill="#f97316"/>',
+            ]
+        )
+    parts.append("</svg>")
+    return "\n".join(parts)
 
 
 def fetch_baseline_counts(repository: IngestionRepository) -> dict[str, Any]:
@@ -548,12 +678,68 @@ def load_data_quality_artifacts() -> dict[str, Any]:
     }
 
 
+def write_presentation_charts(output_dir: Path, summary: dict[str, Any]) -> dict[str, str]:
+    chart_dir = output_dir / "charts"
+    chart_dir.mkdir(parents=True, exist_ok=True)
+    chart_paths = {
+        "ablation_f1": chart_dir / "ablation_f1.svg",
+        "calibration_bins": chart_dir / "calibration_bins.svg",
+        "merge_strategy_f1": chart_dir / "merge_strategy_f1.svg",
+        "recommendation_score_distribution": chart_dir / "recommendation_score_distribution.svg",
+    }
+    write_text(
+        chart_paths["ablation_f1"],
+        horizontal_bar_chart_svg(
+            summary["ablation_study"],
+            title="Ablation Study: F1 By Feature Group",
+            label_key="scenario",
+            value_key="f1",
+            value_label="F1 score",
+        ),
+    )
+    write_text(
+        chart_paths["calibration_bins"],
+        paired_bar_chart_svg(
+            summary["calibration"]["bins"],
+            title="Calibration: Average Probability vs Positive Rate",
+            label_key="bin",
+            first_key="avg_probability",
+            second_key="positive_rate",
+            first_label="average probability",
+            second_label="positive rate",
+        ),
+    )
+    merge_summary = summary.get("existing_er_artifacts", {}).get("merge_strategy_comparison") or {}
+    write_text(
+        chart_paths["merge_strategy_f1"],
+        horizontal_bar_chart_svg(
+            merge_summary.get("strategies", []),
+            title="Merge Strategy Comparison: F1",
+            label_key="strategy",
+            value_key="f1",
+            value_label="F1 score",
+        ),
+    )
+    write_text(
+        chart_paths["recommendation_score_distribution"],
+        horizontal_bar_chart_svg(
+            summary["recommendations"]["score_distribution"],
+            title="Recommendation Score Distribution",
+            label_key="score_bucket",
+            value_key="row_count",
+            value_label="recommendation rows",
+        ),
+    )
+    return {name: str(path) for name, path in chart_paths.items()}
+
+
 def write_markdown_summary(path: Path, summary: dict[str, Any]) -> None:
     baseline = summary["baseline_counts"]
     ablation_rows = summary["ablation_study"]
     calibration = summary["calibration"]
     recommendations = summary["recommendations"]
     defense_demo_case_count = summary["defense_demo_case_count"]
+    presentation_charts = summary["presentation_charts"]
     data_quality = summary["data_quality"]
     lines = [
         "# ML Research Defense Runtime Summary",
@@ -591,6 +777,7 @@ def write_markdown_summary(path: Path, summary: dict[str, Any]) -> None:
             f"- Example rows: `{len(recommendations['examples'])}`",
             f"- Score distribution: `{recommendations['score_distribution']}`",
             f"- Defense demo cases: `{defense_demo_case_count}`",
+            f"- Presentation charts: `{presentation_charts}`",
             "",
             "## Data Quality Impact",
             "",
@@ -636,6 +823,7 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
         "existing_er_artifacts": existing_er_artifacts,
         "data_quality": data_quality,
     }
+    summary["presentation_charts"] = write_presentation_charts(output_dir, summary)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     write_json(output_dir / "ml_research_defense_summary.json", summary)

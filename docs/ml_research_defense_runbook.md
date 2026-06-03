@@ -25,6 +25,10 @@ Expected generated artifacts:
 - `data/artifacts/reports/ml_research_defense/defense_demo_cases.csv`
 - `data/artifacts/reports/ml_research_defense/recommendation_examples.csv`
 - `data/artifacts/reports/ml_research_defense/recommendation_score_distribution.csv`
+- `data/artifacts/reports/ml_research_defense/charts/ablation_f1.svg`
+- `data/artifacts/reports/ml_research_defense/charts/calibration_bins.svg`
+- `data/artifacts/reports/ml_research_defense/charts/merge_strategy_f1.svg`
+- `data/artifacts/reports/ml_research_defense/charts/recommendation_score_distribution.svg`
 
 Open for presentation:
 
@@ -159,6 +163,8 @@ Evidence:
 - `ablation_study.csv`
 - `calibration_bins.csv`
 - `probability_distribution.csv`
+- `charts/ablation_f1.svg`
+- `charts/calibration_bins.svg`
 
 ### 7. Active Learning Casebook
 
@@ -197,6 +203,7 @@ Evidence:
 
 - `recommendation_examples.csv`
 - `recommendation_score_distribution.csv`
+- `charts/recommendation_score_distribution.svg`
 - `dm.game_recommendations`
 
 ## Questions To Be Ready For

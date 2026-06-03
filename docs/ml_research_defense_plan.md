@@ -46,6 +46,8 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `notebooks/03_ml_research_defense_report.ipynb`.
    - `defense_demo_cases.csv` для live-сценария защиты.
    - `recommendation_score_distribution.csv` для анализа baseline-рекомендаций.
+   - SVG-графики для презентации: ablation, calibration, merge strategies,
+     recommendation score distribution.
    - Runtime artifacts:
      `data/artifacts/reports/ml_research_defense/`.
 

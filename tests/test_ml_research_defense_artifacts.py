@@ -23,6 +23,20 @@ def test_to_jsonable_converts_decimal_values() -> None:
     assert module.to_jsonable(payload) == {"score": 0.123, "rows": [{"value": 2.0}]}
 
 
+def test_horizontal_bar_chart_svg_escapes_labels() -> None:
+    svg = module.horizontal_bar_chart_svg(
+        [{"scenario": "A&B", "f1": 0.75}],
+        title="Ablation <F1>",
+        label_key="scenario",
+        value_key="f1",
+        value_label="F1",
+    )
+
+    assert "<svg" in svg
+    assert "A&amp;B" in svg
+    assert "Ablation &lt;F1&gt;" in svg
+
+
 def test_selected_feature_names_excludes_requested_group(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         module,

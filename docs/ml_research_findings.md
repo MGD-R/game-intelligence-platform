@@ -103,6 +103,8 @@ Generated casebook:
   active-learning candidates and recommendation examples.
 - This file is intended as the live defense script: it gives concrete records to discuss
   without searching the database during presentation.
+- Presentation-ready SVG charts are generated under
+  `data/artifacts/reports/ml_research_defense/charts/`.
 
 ## Recommendations Baseline
 
@@ -150,3 +152,7 @@ Main outputs:
 - `data/artifacts/reports/ml_research_defense/defense_demo_cases.csv`
 - `data/artifacts/reports/ml_research_defense/recommendation_examples.csv`
 - `data/artifacts/reports/ml_research_defense/recommendation_score_distribution.csv`
+- `data/artifacts/reports/ml_research_defense/charts/ablation_f1.svg`
+- `data/artifacts/reports/ml_research_defense/charts/calibration_bins.svg`
+- `data/artifacts/reports/ml_research_defense/charts/merge_strategy_f1.svg`
+- `data/artifacts/reports/ml_research_defense/charts/recommendation_score_distribution.svg`
