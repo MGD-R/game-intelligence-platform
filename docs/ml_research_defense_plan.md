@@ -114,8 +114,8 @@ python -m src.devtools.build_ml_defense_presentation
 
 ## Remaining Steps After Current Cycle
 
-1. Create final slide deck from the generated presentation outline.
-2. Run a timed defense rehearsal with the notebook and speaker notes.
+1. Run a timed defense rehearsal with the notebook, live API demo and speaker notes.
+2. Optionally refresh the editable PPTX text from the updated source narrative.
 3. Optionally add neural multilingual embeddings for ER and recommendations.
 4. Optionally add LLM rendering over grounded RAG fact cards.
 5. Merge the feature branch into `develop` after final checks.

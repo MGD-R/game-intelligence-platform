@@ -10,3 +10,7 @@
 
 The deck is generated from current project metrics and should be reviewed after every
 major retraining or data expansion cycle.
+
+The current source narrative is aligned with the read-only FastAPI demo endpoints:
+`/stats/catalog`, `/stats/ml`, `/games/{game_id}/similar`, `/recommend`,
+`/matches/review`, `/explain/recommendation`, and `/explain/match`.

@@ -6,7 +6,8 @@ Game Intelligence Platform is an educational end-to-end data and ML product for 
 
 - Sources: RAWG and Wikidata.
 - Storage: PostgreSQL with `raw`, `stg`, `ml`, `dm`, `meta` schemas.
-- API: FastAPI health endpoints and placeholder catalog/recommendation routes.
+- API: FastAPI health endpoints plus read-only catalog, recommendation, review,
+  explanation, and stats demo routes.
 - Runtime: Docker Compose with `postgres`, `app`, and `worker`.
 - Pipeline: Makefile entrypoints with safe TODO placeholders for later feature branches.
 
@@ -253,5 +254,8 @@ where a database table is unavailable or the local database is not populated.
 
 ## MVP vs Advanced
 
-The project now includes the full data-prepare contour, dry-run-safe optional IGDB scaffold, and file-based restore tooling.
-Business API endpoints, live recommendations, and RAG-facing product behavior remain follow-up work even though the current repository already includes baseline placeholder routes and offline pipeline scaffolding.
+The project now includes the full data-prepare contour, dry-run-safe optional IGDB scaffold,
+file-based restore tooling, and read-only FastAPI demo endpoints for catalog,
+recommendations, review candidates, explanations, and platform statistics.
+Production-grade write APIs, interactive RAG chat, collaborative filtering, and frontend UI
+remain follow-up work.

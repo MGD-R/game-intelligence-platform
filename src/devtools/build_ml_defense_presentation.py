@@ -75,7 +75,10 @@ def build_slide_outline(
             "evidence": demo_by_section.get("Data pipeline", {}).get(
                 "evidence", "ml_research_defense_summary.json"
             ),
-            "demo_action": "Show source counts, candidate pairs and manual labels.",
+            "demo_action": (
+                "Call /stats/catalog and /stats/ml to show source counts, "
+                "candidate pairs, manual labels and readiness."
+            ),
         },
         {
             "slide": 3,
@@ -84,8 +87,11 @@ def build_slide_outline(
                 "Positive and negative labels make the matching problem measurable and trainable."
             ),
             "metric_anchor": metric_text(metrics, "manual_reviewed_labels"),
-            "evidence": "ml.entity_resolution_manual_reviews",
-            "demo_action": "Show examples of positive, negative and ambiguous game pairs.",
+            "evidence": "docs/final_demo_cases_ru.md; ml.entity_resolution_manual_reviews",
+            "demo_action": (
+                "Call /matches/review?review_status=reviewed and show positive, "
+                "negative and ambiguous game pairs."
+            ),
         },
         {
             "slide": 4,
@@ -158,10 +164,11 @@ def build_slide_outline(
                 "shared canonical features."
             ),
             "metric_anchor": "",
-            "evidence": demo_by_section.get("Recommendations", {}).get(
-                "evidence", "recommendation_examples.csv"
+            "evidence": "docs/final_demo_cases_ru.md; recommendation_examples.csv",
+            "demo_action": (
+                "Call /games/{game_id}/similar and /recommend for the DOOM seed, "
+                "then explain shared canonical features."
             ),
-            "demo_action": "Show seed game, recommended games and shared genres/tags/platforms.",
         },
         {
             "slide": 10,
@@ -183,21 +190,22 @@ def build_slide_outline(
                 "ER or recommendation decisions."
             ),
             "metric_anchor": metric_text(metrics, "grounded_explanations"),
-            "evidence": demo_by_section.get("Grounded RAG", {}).get(
-                "evidence", "rag_explanation_examples.md"
+            "evidence": "docs/final_demo_cases_ru.md; rag_explanation_examples.md",
+            "demo_action": (
+                "Call /explain/recommendation and /explain/match to show Russian "
+                "grounded explanations."
             ),
-            "demo_action": "Show Russian match and recommendation explanations grounded in facts.",
         },
         {
             "slide": 12,
             "title": "Conclusions And Next Research Steps",
             "key_message": (
-                "The current work is defense-ready for ER-first research; "
-                "next cycles can add neural embeddings and LLM rendering."
+                "The current work is defense-ready as an ER-first data/ML platform "
+                "with live API demo, reports and a reproducible checklist."
             ),
             "metric_anchor": "",
-            "evidence": "docs/model_card.md",
-            "demo_action": "Summarize accepted limitations and the research roadmap.",
+            "evidence": "docs/model_card.md; docs/final_defense_smoke_checklist_ru.md",
+            "demo_action": "Summarize accepted limitations, GO checklist and the research roadmap.",
         },
     ]
 
@@ -206,14 +214,20 @@ def build_remaining_steps() -> list[dict[str, object]]:
     return [
         {
             "priority": 1,
-            "step": "Create final slide deck",
-            "why": "Convert the generated outline into PPTX or another presentation format.",
+            "step": "Run a timed defense rehearsal",
+            "why": (
+                "Validate that the live API sequence, notebook references and deck fit "
+                "the available time."
+            ),
             "status": "next",
         },
         {
             "priority": 2,
-            "step": "Run a timed defense rehearsal",
-            "why": "Validate that the demo sequence fits the available presentation time.",
+            "step": "Optionally refresh the editable PPTX from the updated outline",
+            "why": (
+                "Make the visible slide text match the latest live API demo cases "
+                "if manual deck edits are required."
+            ),
             "status": "planned",
         },
         {
