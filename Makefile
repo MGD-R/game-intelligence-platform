@@ -13,7 +13,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	validate-staging validate-ml-data manual-review-seed manual-review-db manual-review-db-seed canonical-v0 canonical-v1 dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-training-report er-review-queue er-export-review-queue \
-	er-baseline er-merge-strategy-comparison er-graph-analysis er-embedding-research igdb-matching-analysis ml-research-defense ml-defense-readiness ml-defense-all code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
+	er-baseline er-merge-strategy-comparison er-graph-analysis er-embedding-research igdb-matching-analysis ml-research-defense ml-defense-readiness ml-defense-presentation ml-defense-all code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
 	recommendations bayesian-rating rag-explanations rag demo-data all
 
 DATA_PACK ?= data_packs/gip_demo_local
@@ -357,6 +357,10 @@ ml-defense-readiness:
 	$(COMPOSE_DEV) up -d postgres worker-dev
 	$(COMPOSE_DEV) exec -T worker-dev python -m src.devtools.build_ml_defense_readiness
 
+ml-defense-presentation:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.devtools.build_ml_defense_presentation
+
 ml-defense-all:
 	$(MAKE) er-merge-strategy-comparison
 	$(MAKE) er-graph-analysis
@@ -366,6 +370,7 @@ ml-defense-all:
 	$(MAKE) bayesian-rating
 	$(MAKE) rag-explanations
 	$(MAKE) ml-defense-readiness
+	$(MAKE) ml-defense-presentation
 
 code-graph:
 	$(WORKER_RUN) python -m src.devtools.code_graph --once

@@ -19,6 +19,7 @@ make ml-research-defense
 make bayesian-rating
 make rag-explanations
 make ml-defense-readiness
+make ml-defense-presentation
 ```
 
 For a full rehearsal rebuild, use:
@@ -63,6 +64,10 @@ Expected generated artifacts:
 - `data/artifacts/reports/ml_defense_readiness/ml_defense_metric_snapshot.csv`
 - `data/artifacts/reports/ml_defense_readiness/ml_defense_demo_sequence.csv`
 - `data/artifacts/reports/ml_defense_readiness/ml_defense_artifact_checklist.csv`
+- `data/artifacts/reports/ml_defense_presentation/ml_defense_presentation_outline.md`
+- `data/artifacts/reports/ml_defense_presentation/ml_defense_slide_outline.csv`
+- `data/artifacts/reports/ml_defense_presentation/ml_defense_speaker_notes.md`
+- `data/artifacts/reports/ml_defense_presentation/ml_defense_remaining_steps.csv`
 
 Open for presentation:
 
@@ -71,6 +76,8 @@ Open for presentation:
 - `docs/model_card.md`
 - `data/artifacts/reports/rag_explanations/rag_explanation_examples.md`
 - `data/artifacts/reports/ml_defense_readiness/ml_defense_readiness_report.md`
+- `data/artifacts/reports/ml_defense_presentation/ml_defense_presentation_outline.md`
+- `data/artifacts/reports/ml_defense_presentation/ml_defense_speaker_notes.md`
 
 ## Demo Flow
 

@@ -74,6 +74,9 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `ml_defense_readiness_report.md`, `ml_defense_metric_snapshot.csv`,
      `ml_defense_artifact_checklist.csv` и `ml_defense_demo_sequence.csv` как финальный
      defense-readiness gate.
+   - `ml_defense_presentation_outline.md`, `ml_defense_slide_outline.csv`,
+     `ml_defense_speaker_notes.md` и `ml_defense_remaining_steps.csv` как следующий
+     presentation-readiness слой.
    - SVG-графики для презентации: ablation, calibration, merge strategies,
      recommendation score distribution.
    - Runtime artifacts:
@@ -90,6 +93,7 @@ make ml-research-defense
 make bayesian-rating
 make rag-explanations
 make ml-defense-readiness
+make ml-defense-presentation
 
 # Full rebuild for rehearsal:
 make ml-defense-all
@@ -105,7 +109,16 @@ python -m src.entity_resolution.build_igdb_matching_analysis
 python -m src.recommendations.build_bayesian_rating_analysis
 python -m src.rag.build_explanations
 python -m src.devtools.build_ml_defense_readiness
+python -m src.devtools.build_ml_defense_presentation
 ```
+
+## Remaining Steps After Current Cycle
+
+1. Create final slide deck from the generated presentation outline.
+2. Run a timed defense rehearsal with the notebook and speaker notes.
+3. Optionally add neural multilingual embeddings for ER and recommendations.
+4. Optionally add LLM rendering over grounded RAG fact cards.
+5. Merge the feature branch into `develop` after final checks.
 
 ## Assumptions
 
