@@ -18,6 +18,8 @@ Recommended workflow:
 7. Run `make ml-research-defense`.
 8. Run `make bayesian-rating`.
 9. Run `make rag-explanations`.
-10. Review `data/artifacts/reports` and `data/artifacts/manifests`.
+10. Run `make ml-defense-readiness`.
+11. For a full pre-defense rebuild, run `make ml-defense-all`.
+12. Review `data/artifacts/reports` and `data/artifacts/manifests`.
 
 Keep notebook outputs lightweight and do not commit executed outputs or large generated artifacts.

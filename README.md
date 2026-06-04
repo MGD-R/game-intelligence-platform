@@ -120,6 +120,8 @@ make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
 make rag-explanations
+make ml-defense-readiness
+make ml-defense-all
 make quota-status
 make rawg
 make wikidata
@@ -146,6 +148,8 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make ml-research-defense` builds defense-ready research artifacts: baseline counts, ablation study, calibration analysis, active-learning candidates, and recommendation examples.
 `make bayesian-rating` builds a secondary research report that compares naive weighted source ratings with Bayesian-adjusted ratings for canonical games.
 `make rag-explanations` builds grounded Russian match and recommendation explanation examples from computed facts.
+`make ml-defense-readiness` checks the generated defense artifacts, metric snapshot, and demo sequence.
+`make ml-defense-all` rebuilds the full defense artifact package and runs the final readiness gate.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
 
 ## First Controlled API Download

@@ -71,6 +71,9 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
      naive-vs-Bayesian ranking.
    - `match_explanation_examples.csv`, `recommendation_explanation_examples.csv`,
      `grounded_fact_cards.csv` и `rag_explanation_examples.md` для grounded RAG demo.
+   - `ml_defense_readiness_report.md`, `ml_defense_metric_snapshot.csv`,
+     `ml_defense_artifact_checklist.csv` и `ml_defense_demo_sequence.csv` как финальный
+     defense-readiness gate.
    - SVG-графики для презентации: ablation, calibration, merge strategies,
      recommendation score distribution.
    - Runtime artifacts:
@@ -86,6 +89,10 @@ make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
 make rag-explanations
+make ml-defense-readiness
+
+# Full rebuild for rehearsal:
+make ml-defense-all
 ```
 
 Direct module command:
@@ -97,6 +104,7 @@ python -m src.entity_resolution.build_embedding_research
 python -m src.entity_resolution.build_igdb_matching_analysis
 python -m src.recommendations.build_bayesian_rating_analysis
 python -m src.rag.build_explanations
+python -m src.devtools.build_ml_defense_readiness
 ```
 
 ## Assumptions

@@ -18,6 +18,13 @@ make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
 make rag-explanations
+make ml-defense-readiness
+```
+
+For a full rehearsal rebuild, use:
+
+```bash
+make ml-defense-all
 ```
 
 Expected generated artifacts:
@@ -52,6 +59,10 @@ Expected generated artifacts:
 - `data/artifacts/reports/bayesian_rating/canonical_bayesian_ratings.csv`
 - `data/artifacts/reports/bayesian_rating/low_vote_shrinkage_examples.csv`
 - `data/artifacts/reports/bayesian_rating/top_bayesian_ratings.svg`
+- `data/artifacts/reports/ml_defense_readiness/ml_defense_readiness_report.md`
+- `data/artifacts/reports/ml_defense_readiness/ml_defense_metric_snapshot.csv`
+- `data/artifacts/reports/ml_defense_readiness/ml_defense_demo_sequence.csv`
+- `data/artifacts/reports/ml_defense_readiness/ml_defense_artifact_checklist.csv`
 
 Open for presentation:
 
@@ -59,6 +70,7 @@ Open for presentation:
 - `docs/ml_research_findings.md`
 - `docs/model_card.md`
 - `data/artifacts/reports/rag_explanations/rag_explanation_examples.md`
+- `data/artifacts/reports/ml_defense_readiness/ml_defense_readiness_report.md`
 
 ## Demo Flow
 

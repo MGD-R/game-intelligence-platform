@@ -211,6 +211,22 @@ Known limitations:
 - The explanation quality depends on feature quality and canonical fact quality.
 - Generated examples are for defense/demo analysis and do not replace model evaluation.
 
+## Defense Readiness Gate
+
+The final research package is checked by `make ml-defense-readiness`. The gate verifies
+that required ER, graph, embedding, IGDB, recommendation, Bayesian rating and grounded RAG
+artifacts exist and that the key metric snapshot is complete.
+
+Current generated snapshot:
+
+- Overall status: `ready`.
+- Required artifact groups: `10`.
+- Missing required artifacts: `0`.
+- Missing key metrics: `0`.
+- Demo sequence steps: `9`.
+
+The full pre-defense rebuild command is `make ml-defense-all`.
+
 ## Intended Use
 
 Recommended:
