@@ -6,9 +6,18 @@ entity_resolution:
     no_merge_max: 0.69
 
 recommendations:
-  strategy: content_based_placeholder
+  default_algorithm: content_jaccard_v1
+  supported_algorithms:
+    - content_jaccard_v1
+    - hybrid_content_rating_v1
   top_n_default: 10
+  hybrid_content_rating_v1:
+    content_similarity_weight: 0.75
+    bayesian_rating_weight: 0.15
+    source_coverage_weight: 0.10
+    explainability_penalty_weight: 0.05
 
 rag:
   language: ru
   grounding: canonical_facts_only
+  llm_provider: none

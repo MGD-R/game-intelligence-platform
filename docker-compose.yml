@@ -190,6 +190,31 @@ services:
     networks:
       - gip-net
 
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui/Dockerfile
+    container_name: gip-ui
+    profiles: ["ui"]
+    env_file: *app-env-files
+    environment:
+      API_BASE_URL: "${API_BASE_URL:-http://app:8000}"
+    command:
+      [
+        "streamlit",
+        "run",
+        "src/ui/streamlit_app.py",
+        "--server.address=0.0.0.0",
+        "--server.port=8501",
+      ]
+    ports:
+      - "8501:8501"
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - gip-net
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: gip-pgadmin

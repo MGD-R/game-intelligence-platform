@@ -79,6 +79,7 @@ def build_recommendation_rows(
     max_block_size: int,
     max_candidates_per_game: int,
     min_score: float,
+    algorithm: str = "content_jaccard_v1",
 ) -> list[dict[str, object]]:
     game_by_id = {game.canonical_game_id: game for game in games}
     inverted_index: dict[str, list[str]] = defaultdict(list)
@@ -126,11 +127,18 @@ def build_recommendation_rows(
                     "recommended_canonical_game_id": candidate_id,
                     "rank": rank,
                     "score": round(score, 6),
-                    "algorithm": "content_jaccard_v1",
+                    "algorithm": algorithm,
                     "explanation_factors_json": {
                         "shared_features": overlap_features,
                         "source_feature_count": len(game.features),
                         "candidate_feature_count": len(candidate.features),
+                        "algorithm_family": "content_based",
+                        "hybrid_note": (
+                            "Uses content similarity as a safe fallback baseline; "
+                            "Bayesian rating prior can be added when rating artifacts are joined."
+                        )
+                        if algorithm == "hybrid_content_rating_v1"
+                        else None,
                     },
                 }
             )
@@ -243,12 +251,17 @@ def ensure_recommendations_table(repository: IngestionRepository) -> None:
             cursor.execute(query)
 
 
-def replace_recommendations(repository: IngestionRepository, rows: list[dict[str, object]]) -> None:
+def replace_recommendations(
+    repository: IngestionRepository,
+    rows: list[dict[str, object]],
+    *,
+    algorithm: str,
+) -> None:
     ensure_recommendations_table(repository)
     with repository.connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "DELETE FROM dm.game_recommendations WHERE algorithm = %s", ("content_jaccard_v1",)
+                "DELETE FROM dm.game_recommendations WHERE algorithm = %s", (algorithm,)
             )
             if not rows:
                 return
@@ -312,6 +325,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-candidates-per-game", type=int, default=250)
     parser.add_argument("--min-score", type=float, default=0.12)
     parser.add_argument("--limit-games", type=int, help="Optional canonical game limit for tests.")
+    parser.add_argument(
+        "--algorithm",
+        choices=["content_jaccard_v1", "hybrid_content_rating_v1"],
+        default="content_jaccard_v1",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
         "--report-path",
@@ -337,13 +355,14 @@ def main(argv: list[str] | None = None) -> int:
         max_block_size=args.max_block_size,
         max_candidates_per_game=args.max_candidates_per_game,
         min_score=args.min_score,
+        algorithm=args.algorithm,
     )
     if not args.dry_run:
-        replace_recommendations(repository, rows)
+        replace_recommendations(repository, rows, algorithm=args.algorithm)
         write_report(Path(args.report_path), rows)
     print(
         {
-            "algorithm": "content_jaccard_v1",
+            "algorithm": args.algorithm,
             "feature_game_count": len(games),
             "recommendation_count": len(rows),
             "top_k": args.top_k,

@@ -1,1 +1,1 @@
-"""Router package placeholder for future API decomposition."""
+"""Router package for optional API decomposition."""

@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+import src.api.main as api_main
+from src.api.demo_readonly import ManualReviewDatabaseError, ManualReviewNotFoundError
 from src.api.main import app
 
 client = TestClient(app)
@@ -41,6 +43,8 @@ def test_catalog_stats_returns_demo_snapshot() -> None:
     assert "canonical_games" in body
     assert "recommendations_count" in body
     assert isinstance(body["source_games_by_source"], dict)
+    assert "data_readiness" in body
+    assert "warnings" in body
 
 
 def test_ml_stats_returns_demo_snapshot() -> None:
@@ -53,6 +57,30 @@ def test_ml_stats_returns_demo_snapshot() -> None:
     assert "labeled_pairs" in body
     assert "model_decisions" in body
     assert "entity_resolution_f1" in body
+    assert "data_readiness" in body
+    assert "threshold_policy" in body
+    assert "metrics_summary" in body
+    assert "artifact_presence" in body
+
+
+def test_readiness_stats_returns_status() -> None:
+    response = client.get("/stats/readiness")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] in {"ok", "warning", "error"}
+    assert "found_artifacts" in body
+    assert "missing_artifacts" in body
+
+
+def test_graph_stats_returns_artifact_status() -> None:
+    response = client.get("/stats/graph")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["graph_type"] == "entity_resolution_risk_graph"
+    assert "summary_available" in body
+    assert "warnings" in body
 
 
 def test_games_returns_catalog_page() -> None:
@@ -120,6 +148,23 @@ def test_similar_games_returns_recommendation_page() -> None:
     assert isinstance(body["items"], list)
 
 
+def test_similar_games_accepts_hybrid_algorithm() -> None:
+    list_response = client.get("/games?limit=1")
+    first_items = list_response.json()["items"]
+    if not first_items:
+        return
+
+    game_id = first_items[0]["canonical_game_id"]
+    response = client.get(
+        f"/games/{game_id}/similar?limit=2&algorithm=hybrid_content_rating_v1"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["algorithm"] == "hybrid_content_rating_v1"
+    assert isinstance(body["items"], list)
+
+
 def test_recommend_returns_seeded_recommendations() -> None:
     list_response = client.get("/games?limit=1")
     first_items = list_response.json()["items"]
@@ -135,6 +180,22 @@ def test_recommend_returns_seeded_recommendations() -> None:
     assert body["data_origin"] in {"database", "artifact"}
     assert body["limit"] == 2
     assert body["algorithm"] == "content_jaccard_v1"
+    assert isinstance(body["items"], list)
+
+
+def test_recommend_accepts_hybrid_algorithm() -> None:
+    response = client.post(
+        "/recommend",
+        json={
+            "liked_games": ["DOOM"],
+            "limit": 2,
+            "algorithm": "hybrid_content_rating_v1",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["algorithm"] == "hybrid_content_rating_v1"
     assert isinstance(body["items"], list)
 
 
@@ -220,3 +281,86 @@ def test_match_explanation_returns_grounded_examples() -> None:
         assert "explanation_ru" in item
         assert "facts_used" in item
         assert "sources_used" in item
+
+
+def test_demo_business_endpoints_do_not_return_501() -> None:
+    responses = [
+        client.get("/stats/graph"),
+        client.get("/games?limit=1"),
+        client.get("/matches/review?limit=1&review_status=all"),
+        client.get("/explain/recommendation?limit=1"),
+        client.get("/explain/match?limit=1"),
+        client.post("/recommend", json={"liked_games": ["DOOM"], "limit": 1}),
+    ]
+
+    assert all(response.status_code != 501 for response in responses)
+
+
+def test_update_manual_review_success(monkeypatch) -> None:
+    def fake_update_manual_review_record(**kwargs):
+        return {
+            "pair_id": kwargs["pair_id"],
+            "status": "ok",
+            "updated": True,
+            "updated_at": "2026-06-05T00:00:00+00:00",
+            "review_label": "same_game",
+            "review_status": "reviewed",
+        }
+
+    monkeypatch.setattr(api_main, "update_manual_review_record", fake_update_manual_review_record)
+
+    response = client.patch(
+        "/matches/review/00000000-0000-0000-0000-000000000001",
+        json={
+            "review_label": "same_game",
+            "review_status": "reviewed",
+            "review_notes": "checked",
+            "reviewer": "tester",
+            "confidence": 0.9,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["updated"] is True
+    assert body["review_label"] == "same_game"
+
+
+def test_update_manual_review_rejects_reviewed_uncertain_label() -> None:
+    response = client.patch(
+        "/matches/review/00000000-0000-0000-0000-000000000001",
+        json={"review_label": "uncertain", "review_status": "reviewed"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "review_label_required"
+
+
+def test_update_manual_review_not_found(monkeypatch) -> None:
+    def fake_update_manual_review_record(**kwargs):
+        raise ManualReviewNotFoundError(kwargs["pair_id"])
+
+    monkeypatch.setattr(api_main, "update_manual_review_record", fake_update_manual_review_record)
+
+    response = client.patch(
+        "/matches/review/00000000-0000-0000-0000-000000000404",
+        json={"review_label": "different_game", "review_status": "reviewed"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "manual_review_not_found"
+
+
+def test_update_manual_review_db_unavailable(monkeypatch) -> None:
+    def fake_update_manual_review_record(**kwargs):
+        raise ManualReviewDatabaseError("connection failed")
+
+    monkeypatch.setattr(api_main, "update_manual_review_record", fake_update_manual_review_record)
+
+    response = client.patch(
+        "/matches/review/00000000-0000-0000-0000-000000000503",
+        json={"review_label": "same_game", "review_status": "reviewed"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["code"] == "manual_review_database_unavailable"

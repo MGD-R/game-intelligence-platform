@@ -2,7 +2,7 @@ COMPOSE := docker compose
 COMPOSE_DEV := $(COMPOSE) --profile dev
 WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
-.PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
+.PHONY: build build-dev up up-dev up-mlops up-notebook up-ui up-admin down logs ps shell db-shell \
 	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-by-rawg wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata full-data-plan \
@@ -14,7 +14,8 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-training-report er-review-queue er-export-review-queue \
 	er-baseline er-merge-strategy-comparison er-graph-analysis er-embedding-research igdb-matching-analysis ml-research-defense ml-defense-readiness ml-defense-presentation ml-defense-all code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
-	recommendations bayesian-rating rag-explanations rag demo-data all
+	demo-readiness api-smoke notebook-check notebook-export final-smoke embeddings-research graph-analytics \
+	recommendations recommendations-hybrid bayesian-rating rag-explanations rag demo-data all
 
 DATA_PACK ?= data_packs/gip_demo_local
 
@@ -36,17 +37,20 @@ up-mlops:
 up-notebook:
 	$(COMPOSE) --profile notebook up -d postgres app worker notebook
 
+up-ui:
+	$(COMPOSE) --profile ui up -d postgres app ui
+
 up-admin:
 	$(COMPOSE) --profile admin up -d postgres app worker pgadmin
 
 down:
-	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin down --remove-orphans
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile ui --profile admin down --remove-orphans
 
 logs:
-	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin logs -f --tail=100
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile ui --profile admin logs -f --tail=100
 
 ps:
-	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin ps
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile ui --profile admin ps
 
 shell:
 	$(COMPOSE_DEV) run --rm worker-dev /bin/sh
@@ -372,6 +376,30 @@ ml-defense-all:
 	$(MAKE) ml-defense-readiness
 	$(MAKE) ml-defense-presentation
 
+demo-readiness:
+	$(WORKER_RUN) python -m src.demo.check_readiness
+
+api-smoke:
+	$(WORKER_RUN) python -m src.devtools.api_smoke --base-url $${API_BASE_URL:-http://app-dev:8000}
+
+notebook-check:
+	$(WORKER_RUN) python -m src.devtools.notebook_check
+
+notebook-export:
+	$(COMPOSE) --profile notebook run --rm notebook python -m src.devtools.notebook_export
+
+final-smoke:
+	$(MAKE) demo-readiness
+	$(MAKE) api-smoke
+	$(MAKE) notebook-check
+
+embeddings-research:
+	$(MAKE) er-embedding-research
+	$(WORKER_RUN) python -m src.research.neural_embeddings
+
+graph-analytics:
+	$(MAKE) er-graph-analysis
+
 code-graph:
 	$(WORKER_RUN) python -m src.devtools.code_graph --once
 
@@ -383,6 +411,11 @@ code-graph-mcp:
 
 recommendations:
 	$(WORKER_RUN) python -m src.recommendations.build_recommendations
+
+recommendations-hybrid:
+	$(WORKER_RUN) python -m src.recommendations.build_recommendations \
+		--algorithm hybrid_content_rating_v1 \
+		--report-path data/artifacts/reports/recommendations/hybrid_content_rating_recommendations.csv
 
 bayesian-rating:
 	$(COMPOSE_DEV) up -d postgres worker-dev

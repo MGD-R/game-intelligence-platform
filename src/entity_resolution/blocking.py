@@ -1,4 +1,4 @@
-"""Entity resolution blocking placeholder."""
+"""Entity resolution blocking helpers."""
 
 from __future__ import annotations
 

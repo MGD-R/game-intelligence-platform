@@ -1,4 +1,4 @@
-"""Entity resolution feature placeholder."""
+"""Entity resolution feature helpers."""
 
 from __future__ import annotations
 

@@ -36,8 +36,8 @@ def test_build_slide_outline_contains_required_defense_sections() -> None:
     assert slides[3]["metric_anchor"] == "v3c_f1=0.948675"
 
 
-def test_remaining_steps_start_with_slide_deck() -> None:
+def test_remaining_steps_start_with_timed_rehearsal() -> None:
     steps = build_remaining_steps()
 
-    assert steps[0]["step"] == "Create final slide deck"
+    assert steps[0]["step"] == "Run a timed defense rehearsal"
     assert steps[-1]["status"] == "release_workflow"

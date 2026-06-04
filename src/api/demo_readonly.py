@@ -7,12 +7,24 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.demo.check_readiness import evaluate_demo_readiness
 from src.ingestion.repository import IngestionRepository
+from src.rag.llm_rendering import render_grounded_explanation
 from src.utils.config import project_root
 
 REPORTS_DIR = project_root() / "data" / "artifacts" / "reports"
 ML_RESEARCH_DIR = REPORTS_DIR / "ml_research_defense"
 RAG_EXPLANATIONS_DIR = REPORTS_DIR / "rag_explanations"
+
+SUPPORTED_RECOMMENDATION_ALGORITHMS = {"content_jaccard_v1", "hybrid_content_rating_v1"}
+
+
+class ManualReviewNotFoundError(Exception):
+    """Raised when a manual review row does not exist for a pair."""
+
+
+class ManualReviewDatabaseError(Exception):
+    """Raised when manual review storage is unavailable."""
 
 
 def optional_float(value: object) -> float | None:
@@ -39,6 +51,46 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         return []
     with path.open(encoding="utf-8", newline="") as file:
         return list(csv.DictReader(file))
+
+
+def readiness_brief() -> dict[str, Any]:
+    result = evaluate_demo_readiness(project_root())
+    return {
+        "status": result["status"],
+        "missing_count": len(result["missing_artifacts"]),
+        "warnings": [*result["errors"], *result["warnings"]],
+        "recommendations": result["recommendations"],
+    }
+
+
+def add_readiness(payload: dict[str, Any]) -> dict[str, Any]:
+    readiness = readiness_brief()
+    payload["data_readiness"] = {
+        "status": readiness["status"],
+        "missing_count": readiness["missing_count"],
+        "recommendations": readiness["recommendations"],
+    }
+    warnings = list(payload.get("warnings") or [])
+    if readiness["status"] != "ok":
+        warnings.extend(readiness["warnings"])
+    payload["warnings"] = warnings
+    return payload
+
+
+def add_empty_warning(
+    payload: dict[str, Any],
+    *,
+    subject: str,
+    recommendation: str,
+) -> dict[str, Any]:
+    if payload.get("items"):
+        payload.setdefault("warnings", [])
+        return payload
+    warnings = list(payload.get("warnings") or [])
+    warnings.append(f"No {subject} rows are available for the current demo data snapshot.")
+    warnings.append(recommendation)
+    payload["warnings"] = warnings
+    return payload
 
 
 def sum_row_counts(rows: object) -> int:
@@ -133,7 +185,8 @@ def artifact_catalog_stats() -> dict[str, Any]:
 
 
 def get_catalog_stats() -> dict[str, Any]:
-    return db_catalog_stats() or artifact_catalog_stats()
+    payload = db_catalog_stats() or artifact_catalog_stats()
+    return add_readiness(payload)
 
 
 def db_ml_stats(repository: IngestionRepository | None = None) -> dict[str, Any] | None:
@@ -232,7 +285,64 @@ def artifact_ml_stats() -> dict[str, Any]:
 
 
 def get_ml_stats() -> dict[str, Any]:
-    return db_ml_stats() or artifact_ml_stats()
+    payload = db_ml_stats() or artifact_ml_stats()
+    payload["artifact_presence"] = {
+        "er_metrics": bool(artifact_ml_metrics().get("entity_resolution_f1")),
+        "manual_review_candidates": (
+            REPORTS_DIR / "entity_resolution" / "entity_resolution_manual_review_pending.csv"
+        ).exists()
+        or (
+            REPORTS_DIR / "entity_resolution" / "entity_resolution_manual_review_reviewed.csv"
+        ).exists(),
+        "recommendation_examples": (
+            ML_RESEARCH_DIR / "recommendation_examples.csv"
+        ).exists(),
+        "recommendation_explanations": (
+            RAG_EXPLANATIONS_DIR / "recommendation_explanation_examples.csv"
+        ).exists(),
+        "match_explanations": (
+            RAG_EXPLANATIONS_DIR / "match_explanation_examples.csv"
+        ).exists(),
+    }
+    payload["current_model_version"] = "weighted_logistic_regression_v3c"
+    payload["threshold_policy"] = {
+        "auto_merge": "same_game_probability >= 0.95",
+        "manual_review": "0.70 <= same_game_probability < 0.95",
+        "no_merge": "same_game_probability < 0.70",
+    }
+    payload["metrics_summary"] = {
+        "precision": payload.get("entity_resolution_precision"),
+        "recall": payload.get("entity_resolution_recall"),
+        "f1": payload.get("entity_resolution_f1"),
+        "roc_auc": payload.get("entity_resolution_roc_auc"),
+        "pr_auc": payload.get("entity_resolution_pr_auc"),
+    }
+    payload["calibration_available"] = (
+        ML_RESEARCH_DIR / "calibration_bins.csv"
+    ).exists() or (
+        ML_RESEARCH_DIR / "threshold_evaluation.csv"
+    ).exists()
+    return add_readiness(payload)
+
+
+def get_graph_stats() -> dict[str, Any]:
+    summary_path = REPORTS_DIR / "graph_analysis" / "graph_analysis_summary.json"
+    summary = read_json(summary_path)
+    strategies = summary.get("strategies") if isinstance(summary, dict) else None
+    payload = {
+        "data_origin": "artifact",
+        "graph_type": "entity_resolution_risk_graph",
+        "summary_available": bool(summary),
+        "strategy_count": len(strategies) if isinstance(strategies, list) else 0,
+        "strategies": strategies or [],
+        "warnings": []
+        if summary
+        else ["Graph analysis artifact is missing; run `make graph-analytics`."],
+        "future_work": (
+            "Build a product knowledge graph over games, genres, platforms and companies."
+        ),
+    }
+    return add_readiness(payload)
 
 
 def clamp_limit(limit: int, *, default: int = 20, maximum: int = 100) -> int:
@@ -352,10 +462,15 @@ def artifact_list_games(
 
 
 def list_games(*, limit: int = 20, offset: int = 0, search: str | None = None) -> dict[str, Any]:
-    return db_list_games(limit=limit, offset=offset, search=search) or artifact_list_games(
+    payload = db_list_games(limit=limit, offset=offset, search=search) or artifact_list_games(
         limit=limit,
         offset=offset,
         search=search,
+    )
+    return add_empty_warning(
+        payload,
+        subject="catalog",
+        recommendation="Run `make canonical-v1`, `make bayesian-rating`, or restore a data pack.",
     )
 
 
@@ -591,6 +706,7 @@ def db_similar_games(
     game_id: str,
     *,
     limit: int = 10,
+    algorithm: str = "content_jaccard_v1",
     repository: IngestionRepository | None = None,
 ) -> dict[str, Any] | None:
     repo = repository or IngestionRepository()
@@ -612,13 +728,14 @@ def db_similar_games(
         JOIN dm.canonical_games rec
           ON rec.canonical_game_id = gr.recommended_canonical_game_id
         WHERE gr.canonical_game_id::text = %s
+          AND gr.algorithm = %s
         ORDER BY gr.rank, gr.score DESC
         LIMIT %s
     """
     try:
         with repo.connection() as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query, (game_id, safe_limit))
+                cursor.execute(query, (game_id, algorithm, safe_limit))
                 rows = cursor.fetchall()
     except Exception:
         return None
@@ -627,7 +744,7 @@ def db_similar_games(
         "data_origin": "database",
         "seed_game_id": game_id,
         "seed_game": rows[0]["seed_game"] if rows else None,
-        "algorithm": rows[0]["algorithm"] if rows else "content_jaccard_v1",
+        "algorithm": rows[0]["algorithm"] if rows else algorithm,
         "items": [
             {
                 "canonical_game_id": row["recommended_game_id"],
@@ -644,7 +761,12 @@ def db_similar_games(
     }
 
 
-def artifact_similar_games(seed_game_name: str | None, *, limit: int = 10) -> dict[str, Any]:
+def artifact_similar_games(
+    seed_game_name: str | None,
+    *,
+    limit: int = 10,
+    algorithm: str = "content_jaccard_v1",
+) -> dict[str, Any]:
     safe_limit = clamp_limit(limit, default=10, maximum=50)
     rows = read_csv_rows(ML_RESEARCH_DIR / "recommendation_examples.csv")
     if seed_game_name:
@@ -654,7 +776,7 @@ def artifact_similar_games(seed_game_name: str | None, *, limit: int = 10) -> di
         "data_origin": "artifact",
         "seed_game_id": None,
         "seed_game": seed_game_name or (rows[0].get("seed_game") if rows else None),
-        "algorithm": "content_jaccard_v1",
+        "algorithm": algorithm,
         "items": [
             {
                 "canonical_game_id": None,
@@ -671,11 +793,37 @@ def artifact_similar_games(seed_game_name: str | None, *, limit: int = 10) -> di
     }
 
 
-def similar_games(game_id: str, *, limit: int = 10) -> dict[str, Any]:
+def similar_games(
+    game_id: str,
+    *,
+    limit: int = 10,
+    algorithm: str = "content_jaccard_v1",
+) -> dict[str, Any]:
+    selected_algorithm = (
+        algorithm if algorithm in SUPPORTED_RECOMMENDATION_ALGORITHMS else "content_jaccard_v1"
+    )
     game = get_game(game_id)
-    return db_similar_games(game_id, limit=limit) or artifact_similar_games(
+    payload = db_similar_games(
+        game_id,
+        limit=limit,
+        algorithm=selected_algorithm,
+    ) or artifact_similar_games(
         game.get("name") if game else None,
         limit=limit,
+        algorithm=selected_algorithm,
+    )
+    if algorithm not in SUPPORTED_RECOMMENDATION_ALGORITHMS:
+        payload.setdefault("warnings", []).append(
+            f"Unsupported algorithm `{algorithm}`; using `content_jaccard_v1`."
+        )
+    if selected_algorithm == "hybrid_content_rating_v1" and not payload.get("items"):
+        payload.setdefault("warnings", []).append(
+            "Hybrid recommendation rows are not available; run `make recommendations-hybrid`."
+        )
+    return add_empty_warning(
+        payload,
+        subject="recommendation",
+        recommendation="Run `make recommendations` or `make recommendations-hybrid`.",
     )
 
 
@@ -684,8 +832,12 @@ def recommendations(
     *,
     liked_games: list[str] | None = None,
     limit: int = 10,
+    algorithm: str = "content_jaccard_v1",
 ) -> dict[str, Any]:
     safe_limit = clamp_limit(limit, default=10, maximum=50)
+    selected_algorithm = (
+        algorithm if algorithm in SUPPORTED_RECOMMENDATION_ALGORITHMS else "content_jaccard_v1"
+    )
     resolved_liked_games = find_games_by_names(liked_games or [])
     resolved_ids = [
         str(row["canonical_game_id"])
@@ -694,9 +846,17 @@ def recommendations(
     ]
     effective_seed_game_ids = list(dict.fromkeys([*seed_game_ids, *resolved_ids]))
     if not effective_seed_game_ids:
-        return artifact_similar_games(None, limit=safe_limit)
+        payload = artifact_similar_games(None, limit=safe_limit, algorithm=selected_algorithm)
+        return add_empty_warning(
+            payload,
+            subject="recommendation",
+            recommendation="Provide a seed game or run `make recommendations`.",
+        )
 
-    seed_results = [similar_games(game_id, limit=safe_limit) for game_id in effective_seed_game_ids]
+    seed_results = [
+        similar_games(game_id, limit=safe_limit, algorithm=selected_algorithm)
+        for game_id in effective_seed_game_ids
+    ]
     by_recommendation: dict[str, dict[str, Any]] = {}
     excluded_ids = set(effective_seed_game_ids)
     for seed_result in seed_results:
@@ -717,9 +877,9 @@ def recommendations(
     flattened = list(by_recommendation.values())
     flattened.sort(key=lambda row: (-(row.get("score") or 0.0), row.get("rank") or 0))
     has_database_rows = any(r.get("data_origin") == "database" for r in seed_results)
-    return {
+    payload = {
         "data_origin": "database" if has_database_rows else "artifact",
-        "algorithm": "content_jaccard_v1",
+        "algorithm": selected_algorithm,
         "seed_game_ids": effective_seed_game_ids,
         "liked_games": liked_games or [],
         "resolved_liked_games": resolved_liked_games,
@@ -727,6 +887,19 @@ def recommendations(
         "limit": safe_limit,
         "total": len(flattened),
     }
+    if algorithm not in SUPPORTED_RECOMMENDATION_ALGORITHMS:
+        payload["warnings"] = [
+            f"Unsupported algorithm `{algorithm}`; using `content_jaccard_v1`."
+        ]
+    if selected_algorithm == "hybrid_content_rating_v1" and not payload.get("items"):
+        payload.setdefault("warnings", []).append(
+            "Hybrid recommendation rows are not available; run `make recommendations-hybrid`."
+        )
+    return add_empty_warning(
+        payload,
+        subject="recommendation",
+        recommendation="Run `make recommendations` or `make recommendations-hybrid`.",
+    )
 
 
 def db_review_matches(
@@ -836,11 +1009,95 @@ def review_matches(
         status_filter=normalized_status,
         decision_filter=normalized_decision,
     )
-    return db_result or artifact_review_matches(
+    payload = db_result or artifact_review_matches(
         limit=limit,
         status_filter=normalized_status,
         decision_filter=normalized_decision,
     )
+    return add_empty_warning(
+        payload,
+        subject="manual review",
+        recommendation="Run `make er-review-queue` and `make er-export-review-queue`.",
+    )
+
+
+def update_manual_review_record(
+    *,
+    pair_id: str,
+    review_label: bool | None,
+    review_status: str,
+    review_notes: str | None = None,
+    reviewer: str | None = None,
+    confidence: float | None = None,
+    repository: IngestionRepository | None = None,
+) -> dict[str, Any]:
+    """Update an existing manual review row in PostgreSQL."""
+
+    repo = repository or IngestionRepository()
+    query = """
+        UPDATE ml.entity_resolution_manual_reviews
+        SET review_label = %s,
+            review_status = %s,
+            review_notes = COALESCE(%s, review_notes),
+            reviewer = COALESCE(%s, reviewer),
+            priority_score = COALESCE(%s, priority_score),
+            reviewed_at = CASE
+                WHEN %s = 'reviewed' THEN NOW()
+                WHEN %s IN ('pending', 'skipped', 'unsure') THEN NULL
+                ELSE reviewed_at
+            END,
+            updated_at = NOW()
+        WHERE pair_id::text = %s
+        RETURNING
+            pair_id::text,
+            review_label,
+            review_status,
+            reviewer,
+            review_notes,
+            reviewed_at::text AS reviewed_at,
+            updated_at::text AS updated_at
+    """
+    try:
+        with repo.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (
+                        review_label,
+                        review_status,
+                        review_notes,
+                        reviewer,
+                        confidence,
+                        review_status,
+                        review_status,
+                        pair_id,
+                    ),
+                )
+                row = cursor.fetchone()
+    except Exception as exc:
+        raise ManualReviewDatabaseError(str(exc)) from exc
+
+    if not row:
+        raise ManualReviewNotFoundError(pair_id)
+
+    label_text = (
+        "same_game"
+        if row["review_label"] is True
+        else "different_game"
+        if row["review_label"] is False
+        else "uncertain"
+    )
+    return {
+        "pair_id": row["pair_id"],
+        "status": "ok",
+        "updated": True,
+        "updated_at": row["updated_at"],
+        "reviewed_at": row["reviewed_at"],
+        "review_label": label_text,
+        "review_status": row["review_status"],
+        "reviewer": row["reviewer"],
+        "review_notes": row["review_notes"],
+    }
 
 
 def recommendation_explanation_facts(row: dict[str, str]) -> list[str]:
@@ -979,6 +1236,7 @@ def recommendation_explanations(
     seed_game: str | None = None,
     recommended_game: str | None = None,
     limit: int = 5,
+    mode: str = "template",
 ) -> dict[str, Any]:
     safe_limit = clamp_limit(limit, default=5, maximum=25)
     if game_id:
@@ -988,6 +1246,16 @@ def recommendation_explanations(
             limit=safe_limit,
         )
         if db_result:
+            if mode == "llm":
+                for item in db_result.get("items", []):
+                    rendered = render_grounded_explanation(
+                        template_text=str(item.get("explanation_ru") or ""),
+                        facts=list(item.get("facts_used") or []),
+                        mode=mode,
+                    )
+                    item["explanation_ru"] = rendered.explanation_ru
+                    item["llm_provider"] = rendered.provider
+                    item["warnings"] = rendered.warnings
             return db_result
     if game_id and not seed_game:
         game = get_game(game_id)
@@ -1000,44 +1268,75 @@ def recommendation_explanations(
         rows = [row for row in rows if row.get("seed_game") == seed_game]
     if recommended_game:
         rows = [row for row in rows if row.get("recommended_game") == recommended_game]
-    items = [
-        {
-            **row,
-            "explanation_ru": row.get("grounded_explanation_ru"),
-            "facts_used": recommendation_explanation_facts(row),
-            "sources_used": ["canonical_catalog", "recommendation_features"],
-        }
-        for row in rows[:safe_limit]
-    ]
+    items = []
+    for row in rows[:safe_limit]:
+        facts = recommendation_explanation_facts(row)
+        template_text = str(row.get("grounded_explanation_ru") or "")
+        rendered = render_grounded_explanation(
+            template_text=template_text,
+            facts=facts,
+            mode=mode,
+        )
+        items.append(
+            {
+                **row,
+                "explanation_ru": rendered.explanation_ru,
+                "facts_used": facts,
+                "sources_used": ["canonical_catalog", "recommendation_features"],
+                "llm_provider": rendered.provider,
+                "warnings": rendered.warnings,
+            }
+        )
     return {
         "data_origin": "artifact",
         "items": items,
         "limit": safe_limit,
         "total": len(rows),
+        "warnings": []
+        if items
+        else ["No recommendation explanation rows are available; run `make rag-explanations`."],
     }
 
 
-def match_explanations(*, pair_id: str | None = None, limit: int = 5) -> dict[str, Any]:
+def match_explanations(
+    *,
+    pair_id: str | None = None,
+    limit: int = 5,
+    mode: str = "template",
+) -> dict[str, Any]:
     safe_limit = clamp_limit(limit, default=5, maximum=25)
     rows = read_csv_rows(RAG_EXPLANATIONS_DIR / "match_explanation_examples.csv")
     if pair_id:
         rows = [row for row in rows if row.get("pair_id") == pair_id]
-    items = [
-        {
-            **row,
-            "explanation_ru": row.get("grounded_explanation_ru"),
-            "facts_used": match_explanation_facts(row),
-            "sources_used": [
-                "entity_resolution_features",
-                "entity_resolution_predictions",
-                "manual_review_labels",
-            ],
-        }
-        for row in rows[:safe_limit]
-    ]
+    items = []
+    for row in rows[:safe_limit]:
+        facts = match_explanation_facts(row)
+        template_text = str(row.get("grounded_explanation_ru") or "")
+        rendered = render_grounded_explanation(
+            template_text=template_text,
+            facts=facts,
+            mode=mode,
+        )
+        items.append(
+            {
+                **row,
+                "explanation_ru": rendered.explanation_ru,
+                "facts_used": facts,
+                "sources_used": [
+                    "entity_resolution_features",
+                    "entity_resolution_predictions",
+                    "manual_review_labels",
+                ],
+                "llm_provider": rendered.provider,
+                "warnings": rendered.warnings,
+            }
+        )
     return {
         "data_origin": "artifact",
         "items": items,
         "limit": safe_limit,
         "total": len(rows),
+        "warnings": []
+        if items
+        else ["No match explanation rows are available; run `make rag-explanations`."],
     }

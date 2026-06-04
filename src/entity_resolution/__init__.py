@@ -1,1 +1,1 @@
-"""Entity resolution package placeholders."""
+"""Entity resolution pipeline package."""
