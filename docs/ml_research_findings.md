@@ -237,6 +237,35 @@ Generated casebook:
 пользовательскую ценность. Это хороший аргумент для следующего этапа: embeddings,
 better canonical quality filters и richer recommendation features.
 
+## Grounded RAG Explanation Layer
+
+Grounded RAG блок добавлен как демонстрационный explanation layer. Он не использует LLM
+для принятия решений: объяснения строятся только из рассчитанных ER features, predictions,
+manual labels, canonical facts и recommendation shared features.
+
+Текущий snapshot:
+
+- `25` balanced match explanations.
+- `25` recommendation explanations.
+- `50` grounded fact cards.
+- Language: `ru`.
+
+Match explanation coverage:
+
+- reviewed positives;
+- reviewed negatives;
+- model auto-merge candidates;
+- model manual-review candidates;
+- high-uncertainty cases.
+
+Defense interpretation:
+
+- RAG/LLM не является источником истины и не решает, объединять ли игры.
+- LLM можно подключать позже только как natural-language renderer поверх уже рассчитанных
+  фактов.
+- Текущий слой уже демонстрирует grounded explanations без риска hallucination-based
+  decisions.
+
 ## Bayesian Rating Analysis
 
 Bayesian rating добавлен как вторичный research/statistics блок. Он сравнивает naive
@@ -287,9 +316,9 @@ Generated artifacts:
 8. IGDB-specific matching: rank-based retrieval quality и enrichment coverage.
 9. Active learning: как модель предлагает следующие пары для разметки.
 10. Recommendations: explainable content baseline и его ограничения.
-11. Bayesian rating: почему naive source ratings нужно корректировать числом голосов.
-12. Next research directions: neural embeddings, calibration improvement,
-   grounded RAG explanations.
+11. Grounded RAG explanations: как объяснять решения без передачи decision-making LLM.
+12. Bayesian rating: почему naive source ratings нужно корректировать числом голосов.
+13. Next research directions: neural embeddings, calibration improvement, LLM rendering.
 
 ## Runtime Artifacts
 
@@ -301,6 +330,7 @@ make er-graph-analysis
 make er-embedding-research
 make igdb-matching-analysis
 make bayesian-rating
+make rag-explanations
 ```
 
 Main outputs:
@@ -331,3 +361,8 @@ Main outputs:
 - `data/artifacts/reports/igdb_matching/igdb_enrichment_coverage.csv`
 - `data/artifacts/reports/igdb_matching/igdb_high_risk_reviewed_negatives.csv`
 - `data/artifacts/reports/igdb_matching/igdb_rank_distribution.svg`
+- `data/artifacts/reports/rag_explanations/rag_explanation_summary.json`
+- `data/artifacts/reports/rag_explanations/match_explanation_examples.csv`
+- `data/artifacts/reports/rag_explanations/recommendation_explanation_examples.csv`
+- `data/artifacts/reports/rag_explanations/grounded_fact_cards.csv`
+- `data/artifacts/reports/rag_explanations/rag_explanation_examples.md`

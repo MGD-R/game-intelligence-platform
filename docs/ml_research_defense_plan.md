@@ -47,6 +47,8 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - Дополнить secondary ML/statistics блоком `Bayesian rating`: сравнить naive
      weighted ratings и Bayesian-adjusted ratings для canonical games с малым и большим
      числом голосов.
+   - Добавить grounded RAG explanation layer: русскоязычные объяснения match/recommendation
+     examples только на основе рассчитанных фактов.
 
 5. **Defense artifacts**
    - `docs/ml_research_findings.md`.
@@ -67,6 +69,8 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `bayesian_rating_summary.md`, `canonical_bayesian_ratings.csv`,
      `low_vote_shrinkage_examples.csv` и `top_bayesian_ratings.svg` для демонстрации
      naive-vs-Bayesian ranking.
+   - `match_explanation_examples.csv`, `recommendation_explanation_examples.csv`,
+     `grounded_fact_cards.csv` и `rag_explanation_examples.md` для grounded RAG demo.
    - SVG-графики для презентации: ablation, calibration, merge strategies,
      recommendation score distribution.
    - Runtime artifacts:
@@ -81,6 +85,7 @@ make er-embedding-research
 make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
+make rag-explanations
 ```
 
 Direct module command:
@@ -91,12 +96,14 @@ python -m src.entity_resolution.build_graph_analysis
 python -m src.entity_resolution.build_embedding_research
 python -m src.entity_resolution.build_igdb_matching_analysis
 python -m src.recommendations.build_bayesian_rating_analysis
+python -m src.rag.build_explanations
 ```
 
 ## Assumptions
 
 - Production `dm.canonical_*` не меняется модельными auto-merge без отдельного решения.
 - Основной фокус - объяснимый ER baseline и сильный research narrative.
-- Heavy neural embeddings/RAG остаются следующими направлениями; lightweight TF-IDF/SVD
-  title embeddings and Bayesian rating реализованы как secondary research lanes.
+- Heavy neural embeddings/LLM generation остаются следующими направлениями; lightweight
+  TF-IDF/SVD title embeddings, Bayesian rating and grounded RAG examples реализованы как
+  secondary research lanes.
 - Сгенерированные data artifacts остаются вне Git.

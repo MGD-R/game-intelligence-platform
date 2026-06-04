@@ -119,6 +119,7 @@ make er-embedding-research
 make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
+make rag-explanations
 make quota-status
 make rawg
 make wikidata
@@ -144,6 +145,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make igdb-matching-analysis` builds IGDB search-lane retrieval, review-quality, and enrichment-coverage artifacts.
 `make ml-research-defense` builds defense-ready research artifacts: baseline counts, ablation study, calibration analysis, active-learning candidates, and recommendation examples.
 `make bayesian-rating` builds a secondary research report that compares naive weighted source ratings with Bayesian-adjusted ratings for canonical games.
+`make rag-explanations` builds grounded Russian match and recommendation explanation examples from computed facts.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
 
 ## First Controlled API Download

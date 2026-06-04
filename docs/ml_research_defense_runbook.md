@@ -17,6 +17,7 @@ make er-embedding-research
 make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
+make rag-explanations
 ```
 
 Expected generated artifacts:
@@ -31,6 +32,8 @@ Expected generated artifacts:
 - `data/artifacts/reports/igdb_matching/igdb_matching_summary.json`
 - `data/artifacts/reports/igdb_matching/igdb_review_precision_by_rank.csv`
 - `data/artifacts/reports/igdb_matching/igdb_enrichment_coverage.csv`
+- `data/artifacts/reports/rag_explanations/match_explanation_examples.csv`
+- `data/artifacts/reports/rag_explanations/recommendation_explanation_examples.csv`
 - `data/artifacts/reports/ml_research_defense/ml_research_defense_summary.json`
 - `data/artifacts/reports/ml_research_defense/ablation_study.csv`
 - `data/artifacts/reports/ml_research_defense/calibration_bins.csv`
@@ -55,6 +58,7 @@ Open for presentation:
 - `notebooks/03_ml_research_defense_report.ipynb`
 - `docs/ml_research_findings.md`
 - `docs/model_card.md`
+- `data/artifacts/reports/rag_explanations/rag_explanation_examples.md`
 
 ## Demo Flow
 
@@ -346,6 +350,35 @@ Evidence:
 - `low_vote_shrinkage_examples.csv`
 - `top_bayesian_ratings.svg`
 
+### 13. Grounded RAG Explanations
+
+Message:
+
+> RAG/LLM is not used to decide matches or recommendations. The explanation layer
+> only renders computed facts: ER features, model scores, manual labels, canonical
+> facts and recommendation shared features.
+
+Show:
+
+- Russian match explanations;
+- Russian recommendation explanations;
+- grounded fact cards;
+- grounding policy.
+
+Current snapshot:
+
+- `25` balanced match explanations.
+- `25` recommendation explanations.
+- `50` grounded fact cards.
+
+Evidence:
+
+- `rag_explanation_summary.json`
+- `match_explanation_examples.csv`
+- `recommendation_explanation_examples.csv`
+- `grounded_fact_cards.csv`
+- `rag_explanation_examples.md`
+
 ## Questions To Be Ready For
 
 | Question | Short answer |
@@ -358,7 +391,8 @@ Evidence:
 | Why Logistic Regression? | It is interpretable, fast, reproducible and sufficient for a strong baseline before neural embeddings. |
 | Is recommendation ML complete? | It is a content-based baseline. Collaborative filtering is out of scope without user interaction data. |
 | Why Bayesian rating? | It reduces ranking noise from low-vote source ratings and demonstrates a separate statistical ML block on top of canonical data. |
-| What is next? | Multilingual neural embeddings, calibrated thresholds and grounded RAG explanations. |
+| Why RAG is safe here? | It only explains already computed facts; it does not decide matches, merges or recommendations. |
+| What is next? | Multilingual neural embeddings, calibrated thresholds and optional LLM rendering over grounded facts. |
 
 ## Final Defense Claim
 

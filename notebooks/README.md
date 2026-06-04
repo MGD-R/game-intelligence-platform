@@ -17,6 +17,7 @@ Recommended workflow:
 6. Run `make igdb-matching-analysis`.
 7. Run `make ml-research-defense`.
 8. Run `make bayesian-rating`.
-9. Review `data/artifacts/reports` and `data/artifacts/manifests`.
+9. Run `make rag-explanations`.
+10. Review `data/artifacts/reports` and `data/artifacts/manifests`.
 
 Keep notebook outputs lightweight and do not commit executed outputs or large generated artifacts.

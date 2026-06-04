@@ -186,6 +186,31 @@ Known limitations:
 - Lower-rank candidates are useful as negative/ambiguous examples, not as auto-merge inputs.
 - IGDB search candidates must still go through ER scoring and manual-review governance.
 
+## Secondary Research Block: Grounded RAG Explanations
+
+The project includes a grounded explanation layer for match and recommendation examples.
+It does not use an LLM to decide matches, merges or recommendations.
+
+Current generated snapshot:
+
+- Match explanations: `25`.
+- Recommendation explanations: `25`.
+- Grounded fact cards: `50`.
+- Language: `ru`.
+
+Grounding policy:
+
+- Match explanations use computed ER features, model predictions and manual labels.
+- Recommendation explanations use canonical facts and shared recommendation features.
+- LLM generation, if added later, must only render these facts and must not introduce new
+  decision evidence.
+
+Known limitations:
+
+- Current explanations are template-based, not interactive RAG chat.
+- The explanation quality depends on feature quality and canonical fact quality.
+- Generated examples are for defense/demo analysis and do not replace model evaluation.
+
 ## Intended Use
 
 Recommended:
@@ -209,4 +234,4 @@ Not recommended:
 - Use graph analysis outputs to review same-source duplicate components before expanding
   canonical merge policy.
 - Use IGDB rank/confidence analysis to tune candidate retrieval and manual-review sampling.
-- Tune Bayesian rating prior and add grounded RAG explanations as secondary research tracks.
+- Tune Bayesian rating prior and optionally add LLM rendering over grounded RAG facts.

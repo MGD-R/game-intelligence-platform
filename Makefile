@@ -14,7 +14,7 @@ WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
 	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-training-report er-review-queue er-export-review-queue \
 	er-baseline er-merge-strategy-comparison er-graph-analysis er-embedding-research igdb-matching-analysis ml-research-defense code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
-	recommendations bayesian-rating rag demo-data all
+	recommendations bayesian-rating rag-explanations rag demo-data all
 
 DATA_PACK ?= data_packs/gip_demo_local
 
@@ -369,8 +369,11 @@ bayesian-rating:
 	$(COMPOSE_DEV) up -d postgres worker-dev
 	$(COMPOSE_DEV) exec -T worker-dev python -m src.recommendations.build_bayesian_rating_analysis
 
-rag:
-	$(WORKER_RUN) python -m src.rag.build_index
+rag-explanations:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.rag.build_explanations
+
+rag: rag-explanations
 
 demo-data:
 	$(MAKE) rawg-demo
