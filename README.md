@@ -46,6 +46,7 @@ Demo script RU: [docs/demo_script_ru.md](docs/demo_script_ru.md).
 Final demo cases RU: [docs/final_demo_cases_ru.md](docs/final_demo_cases_ru.md).
 Final defense smoke checklist RU:
 [docs/final_defense_smoke_checklist_ru.md](docs/final_defense_smoke_checklist_ru.md).
+Timed defense rehearsal RU: [docs/timed_defense_rehearsal_ru.md](docs/timed_defense_rehearsal_ru.md).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
 IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).

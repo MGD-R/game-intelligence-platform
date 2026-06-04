@@ -163,6 +163,7 @@ python3 -m nbconvert --execute --to notebook \
 | [docs/model_card.md](model_card.md) | exists | model card |
 | [docs/demo_script_ru.md](demo_script_ru.md) | exists | live demo script |
 | [docs/final_demo_cases_ru.md](final_demo_cases_ru.md) | exists | проверенные demo cases |
+| [docs/timed_defense_rehearsal_ru.md](timed_defense_rehearsal_ru.md) | exists | тайминг репетиции защиты |
 | [docs/presentations/game-intelligence-ml-defense.pptx](presentations/game-intelligence-ml-defense.pptx) | exists | 12-slide PPTX deck |
 
 Readiness target:
@@ -252,6 +253,7 @@ endpoints реализованы и проверены.
 - readiness artifacts status = `ready`;
 - PPTX deck exists and has 12 slides;
 - final demo script and demo cases documented.
+- timed defense rehearsal documented.
 
 Перед самой защитой рекомендуется повторить:
 
