@@ -10,11 +10,14 @@ This document tracks the remaining work after the current ML research readiness 
   checklist from the readiness artifacts.
 - `make ml-defense-all` rebuilds all research artifacts and then generates the presentation
   package.
+- The first editable PPTX deck is available at
+  `docs/presentations/game-intelligence-ml-defense.pptx`.
 
 ## Next Practical Step
 
-Create the final slide deck from:
+Run a timed defense rehearsal using:
 
+- `docs/presentations/game-intelligence-ml-defense.pptx`
 - `data/artifacts/reports/ml_defense_presentation/ml_defense_presentation_outline.md`
 - `data/artifacts/reports/ml_defense_presentation/ml_defense_slide_outline.csv`
 - `data/artifacts/reports/ml_defense_presentation/ml_defense_speaker_notes.md`

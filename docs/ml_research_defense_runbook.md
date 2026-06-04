@@ -71,6 +71,7 @@ Expected generated artifacts:
 
 Open for presentation:
 
+- `docs/presentations/game-intelligence-ml-defense.pptx`
 - `notebooks/03_ml_research_defense_report.ipynb`
 - `docs/ml_research_findings.md`
 - `docs/model_card.md`
