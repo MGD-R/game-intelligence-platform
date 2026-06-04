@@ -9,6 +9,7 @@
 
 ```bash
 make up-dev
+make final-smoke
 make ps
 ```
 
@@ -18,6 +19,7 @@ make ps
 - `gip-app-dev` запущен и слушает `localhost:8000`;
 - `gip-worker-dev` запущен для служебных команд;
 - API endpoints работают в read-only режиме и не запускают внешние API downloads.
+- `make final-smoke` проверяет readiness, API smoke и notebooks без внешних API calls.
 
 Важно: если `gip-app-dev` был остановлен, `curl`-часть demo script не будет работать,
 хотя backend smoke через `TestClient` может проходить.
@@ -30,8 +32,10 @@ make ps
 curl http://localhost:8000/health
 curl http://localhost:8000/health/db
 curl http://localhost:8000/version
+curl http://localhost:8000/stats/readiness
 curl http://localhost:8000/stats/catalog
 curl http://localhost:8000/stats/ml
+curl http://localhost:8000/stats/graph
 ```
 
 Текущий snapshot:
@@ -55,6 +59,14 @@ curl http://localhost:8000/stats/ml
 | ER recall | 0.916455 |
 | ER ROC-AUC | 0.957274 |
 | ER PR-AUC | 0.994369 |
+
+Readiness/graph demo cases:
+
+| Endpoint | What To Show |
+|---|---|
+| `/stats/readiness` | found/missing artifacts, recommended recovery commands, demo data status |
+| `/stats/graph` | ER-risk graph governance, not a full product knowledge graph |
+| `/stats/ml` | threshold policy, model metrics, manual label counts |
 
 ## Catalog Cases
 
@@ -90,9 +102,10 @@ curl "http://localhost:8000/games/015078c4-059b-5a5f-ab7e-e8a43d3912eb"
 
 ```bash
 curl "http://localhost:8000/games/015078c4-059b-5a5f-ab7e-e8a43d3912eb/similar?limit=3"
+curl "http://localhost:8000/games/015078c4-059b-5a5f-ab7e-e8a43d3912eb/similar?limit=3&algorithm=hybrid_content_rating_v1"
 curl -X POST http://localhost:8000/recommend \
   -H "Content-Type: application/json" \
-  -d '{"seed_game_ids":["015078c4-059b-5a5f-ab7e-e8a43d3912eb"],"limit":3}'
+  -d '{"seed_game_ids":["015078c4-059b-5a5f-ab7e-e8a43d3912eb"],"limit":3,"algorithm":"content_jaccard_v1"}'
 ```
 
 Проверенные кейсы:
@@ -107,6 +120,7 @@ curl -X POST http://localhost:8000/recommend \
 Тезис:
 
 - Это explainable content-based recommender.
+- `hybrid_content_rating_v1` можно показать как lightweight non-production extension.
 - Он не заменяет collaborative filtering, потому что пользовательских интеракций в проекте нет.
 - Для защиты это корректный baseline, так как он объясним и построен поверх canonical facts.
 
@@ -117,6 +131,18 @@ curl -X POST http://localhost:8000/recommend \
 ```bash
 curl "http://localhost:8000/matches/review?limit=5&review_status=reviewed"
 ```
+
+Write endpoint для feedback loop:
+
+```bash
+curl -X PATCH "http://localhost:8000/matches/review/<pair_id>" \
+  -H "Content-Type: application/json" \
+  -H "X-GIP-Write-API-Key: <optional-if-configured>" \
+  -d '{"review_label":"same_game","review_status":"reviewed","review_notes":"demo check","reviewer":"defense-demo","confidence":0.9}'
+```
+
+Важно: write endpoint использовать только на заранее выбранной безопасной test-паре.
+Artifact fallback read-only, поэтому без PostgreSQL manual review row endpoint вернет `404/503`.
 
 Кейсы:
 
@@ -149,6 +175,8 @@ curl "http://localhost:8000/matches/review?limit=5&review_status=reviewed"
 ```bash
 curl "http://localhost:8000/explain/recommendation?limit=2"
 curl "http://localhost:8000/explain/match?limit=2"
+curl "http://localhost:8000/explain/recommendation?limit=2&mode=llm"
+curl "http://localhost:8000/explain/match?limit=2&mode=llm"
 ```
 
 Recommendation explanation cases:
@@ -172,6 +200,7 @@ Match explanation cases:
 - Он объясняет уже рассчитанные факты: features, model probability, manual label,
   recommendation shared factors.
 - Это безопасная форма RAG/LLM-like объяснений для защиты.
+- `mode=llm` при `LLM_PROVIDER=none` возвращает template fallback с warning; это нормально.
 
 ## ML Research Materials
 
@@ -185,6 +214,7 @@ Match explanation cases:
 | [docs/model_card.md](model_card.md) | exists | model card |
 | [docs/platform_analytics_ru.md](platform_analytics_ru.md) | exists | русское описание платформы |
 | [docs/demo_script_ru.md](demo_script_ru.md) | exists | пошаговый demo script |
+| [docs/live_demo_script_final_ru.md](live_demo_script_final_ru.md) | exists | финальный короткий live-demo script |
 
 Readiness artifacts:
 
@@ -214,8 +244,9 @@ Readiness artifacts:
 8. Threshold policy: why controlled hybrid is better than blind auto-merge.
 9. Recommendations: content-based baseline and examples.
 10. Grounded explanations: no LLM decisions, only fact-based explanations.
-11. Readiness: artifacts/notebook/report/model card.
-12. Next steps: improve embeddings, IGDB search matching, user interactions if available.
+11. Optional UI: `make up-ui`, Streamlit on `localhost:8501`.
+12. Readiness: artifacts/notebook/report/model card.
+13. Next steps: production KG, learned recommender with interactions, production UI/RAG.
 
 ## Known Demo Notes
 
@@ -227,3 +258,5 @@ Readiness artifacts:
   are not populated yet.
 - Recommendation explanations come from prepared RAG explanation artifacts, while recommendation
   rankings come from `dm.game_recommendations`.
+- Main final check: `make final-smoke`.
+- Optional UI is a backup/visual layer; FastAPI `/docs` remains the primary demo surface.

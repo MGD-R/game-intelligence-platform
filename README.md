@@ -45,6 +45,7 @@ ML research defense runbook: [docs/ml_research_defense_runbook.md](docs/ml_resea
 Final project execution plan RU: [docs/final_project_execution_plan_ru.md](docs/final_project_execution_plan_ru.md).
 Demo script RU: [docs/demo_script_ru.md](docs/demo_script_ru.md).
 Final demo cases RU: [docs/final_demo_cases_ru.md](docs/final_demo_cases_ru.md).
+Final live demo script RU: [docs/live_demo_script_final_ru.md](docs/live_demo_script_final_ru.md).
 Final defense smoke checklist RU:
 [docs/final_defense_smoke_checklist_ru.md](docs/final_defense_smoke_checklist_ru.md).
 Timed defense rehearsal RU: [docs/timed_defense_rehearsal_ru.md](docs/timed_defense_rehearsal_ru.md).
@@ -136,6 +137,14 @@ make rag-explanations
 make ml-defense-readiness
 make ml-defense-presentation
 make ml-defense-all
+make demo-readiness
+make api-smoke
+make notebook-check
+make notebook-export
+make final-smoke
+make graph-analytics
+make embeddings-research
+make recommendations-hybrid
 make quota-status
 make rawg
 make wikidata
@@ -165,7 +174,30 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make ml-defense-readiness` checks the generated defense artifacts, metric snapshot, and demo sequence.
 `make ml-defense-presentation` builds a slide outline, speaker notes, and remaining-step checklist from the readiness artifacts.
 `make ml-defense-all` rebuilds the full defense artifact package and runs the final readiness gate.
+`make demo-readiness` validates local demo data, report artifacts, recommendations, ER/manual review artifacts, explanations, and data-pack availability.
+`make api-smoke` checks the main FastAPI demo endpoints against `API_BASE_URL`.
+`make notebook-check` validates defense notebooks are present and parseable.
+`make notebook-export` exports defense notebooks to HTML through the optional notebook profile.
+`make final-smoke` runs the minimal pre-defense check: demo readiness, API smoke, and notebook check.
+`make embeddings-research` runs the existing TF-IDF/SVD embedding research plus an optional neural-embedding fallback report.
+`make graph-analytics` rebuilds ER graph risk artifacts.
+`make recommendations-hybrid` writes a separate `hybrid_content_rating_v1` recommendation layer using the safe content baseline as the current fallback.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
+
+## Demo Readiness
+
+Use this command before a rehearsal or defense:
+
+```bash
+make demo-readiness
+```
+
+It returns `ok`, `warning`, or `error`, lists found/missing artifacts, and suggests the
+Makefile commands needed to rebuild missing data. The same information is available through:
+
+```bash
+curl http://localhost:8000/stats/readiness
+```
 
 ## Historical First Controlled API Download
 
@@ -244,6 +276,9 @@ make igdb-staging
 - `GET /explain/match`
 - `GET /stats/catalog`
 - `GET /stats/ml`
+- `GET /stats/readiness`
+- `GET /stats/graph`
+- `PATCH /matches/review/{pair_id}`
 
 The catalog, recommendation, review, explanation, and stats endpoints are read-only demo
 endpoints. They read PostgreSQL when available and fall back to generated ML defense artifacts
@@ -252,8 +287,14 @@ where a database table is unavailable or the local database is not populated.
 Demo API notes:
 
 - `POST /recommend` accepts either `seed_game_ids` or `liked_games` title strings.
+- Recommendation endpoints accept `algorithm=content_jaccard_v1` or
+  `algorithm=hybrid_content_rating_v1`.
 - `GET /matches/review` accepts `review_status` and `decision` filters.
+- `PATCH /matches/review/{pair_id}` updates PostgreSQL manual review rows only; artifact
+  fallback is read-only. If `GIP_WRITE_API_KEY` is set, pass it as `X-GIP-Write-API-Key`.
 - Explanation endpoints include `explanation_ru`, `facts_used`, and `sources_used` fields.
+  They accept `mode=template|llm`; LLM mode is disabled by default and falls back to grounded
+  template text unless an approved provider is configured.
 
 ## Docker Profiles
 
@@ -261,6 +302,7 @@ Demo API notes:
 - `make up-dev` starts the local development stack with bind mounts and autoreload.
 - `make up-mlops` adds `mlflow` and `minio`.
 - `make up-notebook` adds `notebook`.
+- `make up-ui` starts the optional Streamlit demo UI on port `8501`.
 - `make up-admin` adds `pgadmin`.
 
 ## Security Notes
@@ -275,6 +317,8 @@ Demo API notes:
 
 The project now includes the full data-prepare contour, dry-run-safe optional/search IGDB
 support, file-based restore tooling, and read-only FastAPI demo endpoints for catalog,
-recommendations, review candidates, explanations, and platform statistics.
-Production-grade write APIs, interactive RAG chat, collaborative filtering, and frontend UI
+recommendations, review candidates, explanations, platform statistics, demo readiness,
+manual-review write updates, optional Streamlit UI, notebook export checks, and lightweight
+optional embedding/graph/hybrid recommendation research lanes.
+Production-grade auth, interactive RAG chat, collaborative filtering, and full frontend UX
 remain follow-up work.

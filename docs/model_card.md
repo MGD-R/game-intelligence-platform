@@ -70,6 +70,14 @@ Decision thresholds:
 - `0.70-0.95`: manual review;
 - `< 0.70`: no merge.
 
+Current API governance exposes the same policy through `/stats/ml`:
+
+| Decision | Policy |
+|---|---|
+| `auto_merge` | `same_game_probability >= 0.95` |
+| `manual_review` | `0.70 <= same_game_probability < 0.95` |
+| `no_merge` | `same_game_probability < 0.70` |
+
 ## Metrics
 
 Weighted baseline `v3c`:
@@ -154,7 +162,10 @@ Known limitations:
 
 - TF-IDF/SVD title vectors are not semantic multilingual neural embeddings.
 - The experiment uses reviewed ER pairs only and does not change canonical merge policy.
-- External neural embeddings remain a future research extension.
+- Optional neural embeddings are available as a non-blocking research lane through
+  `make embeddings-research`. If `sentence-transformers` or the multilingual model are not
+  available locally, the command falls back to TF-IDF/SVD-style scoring and writes a warning
+  report instead of failing the project.
 
 ## Source-Specific Research Block: IGDB Matching
 
@@ -207,7 +218,10 @@ Grounding policy:
 
 Known limitations:
 
-- Current explanations are template-based, not interactive RAG chat.
+- Current explanations are template-based by default, not interactive RAG chat.
+- `mode=llm` is optional. With `LLM_PROVIDER=none`, endpoints return the template grounded
+  explanation with a warning. Mock/local/external providers must pass groundedness checks and
+  may only render existing facts.
 - The explanation quality depends on feature quality and canonical fact quality.
 - Generated examples are for defense/demo analysis and do not replace model evaluation.
 
@@ -226,6 +240,8 @@ Current generated snapshot:
 - Demo sequence steps: `9`.
 
 The full pre-defense rebuild command is `make ml-defense-all`.
+Demo data readiness is checked by `make demo-readiness` and `/stats/readiness`.
+Main API endpoints can be smoke-checked with `make api-smoke`.
 
 ## Intended Use
 

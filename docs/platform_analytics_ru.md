@@ -51,6 +51,7 @@
 - [docs/model_card.md](model_card.md)
 - [docs/ml_research_defense_runbook.md](ml_research_defense_runbook.md)
 - [docs/ml_defense_remaining_steps.md](ml_defense_remaining_steps.md)
+- [docs/final_project_readiness_ru.md](final_project_readiness_ru.md)
 
 Готовые notebook:
 
@@ -750,11 +751,12 @@ reports + notebooks + readiness metrics -> speaker notes -> PPTX deck
 1. Read-only FastAPI endpoints уже читают реальные `dm`/`ml` таблицы с artifact fallback:
    `/games`, `/games/{game_id}`, `/games/{game_id}/similar`, `/recommend`,
    `/matches/review`, `/explain/recommendation`, `/explain/match`, `/stats/catalog`,
-   `/stats/ml`.
+   `/stats/ml`, `/stats/readiness`, `/stats/graph`.
 2. API demo scenario и smoke tests добавлены.
-3. Contract для canonical catalog API зафиксирован в README, demo docs и tests.
-4. Следующий продуктовый шаг - простой UI поверх уже готового API, если это потребуется
-   после защиты.
+3. Добавлен `PATCH /matches/review/{pair_id}` для PostgreSQL-backed manual review updates.
+4. Добавлен optional Streamlit UI (`make up-ui`) поверх готового API.
+5. Contract для canonical catalog API зафиксирован в README, demo docs и tests.
+6. Следующий продуктовый шаг - production frontend/auth/CI hardening после защиты.
 
 ### 12.3. Для данных
 

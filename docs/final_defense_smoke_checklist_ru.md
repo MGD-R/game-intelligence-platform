@@ -4,7 +4,7 @@
 что проект демонстрируется как единая платформа: данные -> ER/ML -> canonical catalog ->
 recommendations -> explanations -> FastAPI demo -> notebook/report/deck.
 
-Дата последней проверки: 2026-06-04.
+Дата последней проверки: 2026-06-05.
 
 ## 1. Runtime Stack
 
@@ -40,6 +40,8 @@ curl http://localhost:8000/health/db
 curl http://localhost:8000/version
 curl http://localhost:8000/stats/catalog
 curl http://localhost:8000/stats/ml
+curl http://localhost:8000/stats/readiness
+curl http://localhost:8000/stats/graph
 ```
 
 Ожидаемый результат:
@@ -49,6 +51,8 @@ curl http://localhost:8000/stats/ml
 - `/version`: `game-intelligence-platform`;
 - `/stats/catalog`: `data_origin = database`;
 - `/stats/ml`: `readiness_status = ready`.
+- `/stats/readiness`: `status = ok|warning|error` с found/missing artifacts;
+- `/stats/graph`: ER graph risk summary или warning, если artifact отсутствует.
 
 Фактический snapshot:
 
@@ -82,6 +86,8 @@ curl -X POST http://localhost:8000/recommend \
 curl "http://localhost:8000/matches/review?limit=3&review_status=reviewed"
 curl "http://localhost:8000/explain/recommendation?limit=2"
 curl "http://localhost:8000/explain/match?limit=2"
+curl "http://localhost:8000/explain/recommendation?limit=2&mode=llm"
+curl "http://localhost:8000/games/015078c4-059b-5a5f-ab7e-e8a43d3912eb/similar?limit=3&algorithm=hybrid_content_rating_v1"
 ```
 
 Проверенный основной demo seed:
@@ -104,6 +110,10 @@ curl "http://localhost:8000/explain/match?limit=2"
 - Для демонстрации manual review использовать `review_status=reviewed` или
   `review_status=all`.
 - Explanation endpoints читают подготовленные grounded explanation artifacts.
+- `mode=llm` не передает LLM право принимать решения; при `LLM_PROVIDER=none` возвращается
+  template fallback с warning.
+- `PATCH /matches/review/{pair_id}` обновляет только PostgreSQL manual review rows. Artifact
+  fallback read-only.
 
 ## 4. Code Quality Smoke
 
@@ -114,6 +124,10 @@ python -m compileall src
 ruff check src tests
 pytest tests/test_api.py
 docker compose config -q
+make demo-readiness
+make api-smoke
+make notebook-check
+make final-smoke
 ```
 
 Фактический результат последней проверки:
@@ -122,8 +136,12 @@ docker compose config -q
 |---|---|
 | `compileall src` | passed |
 | `ruff check src tests` | passed |
-| `pytest tests/test_api.py` | `17 passed` |
+| `pytest` | `231 passed`, `2 warnings` |
 | `docker compose config -q` | passed |
+| `make demo-readiness` | `Status: ok` |
+| `make api-smoke` | все основные demo endpoints вернули `200` |
+| `make notebook-check` | ключевые notebooks существуют и parseable |
+| `make final-smoke` | sequential wrapper for readiness/API/notebook checks |
 
 ## 5. Notebook Smoke
 
@@ -165,6 +183,7 @@ python3 -m nbconvert --execute --to notebook \
 | [docs/ml_research_defense_runbook.md](ml_research_defense_runbook.md) | exists | сценарий объяснения ML-части |
 | [docs/model_card.md](model_card.md) | exists | model card |
 | [docs/demo_script_ru.md](demo_script_ru.md) | exists | live demo script |
+| [docs/live_demo_script_final_ru.md](live_demo_script_final_ru.md) | exists | short final live demo script |
 | [docs/final_demo_cases_ru.md](final_demo_cases_ru.md) | exists | проверенные demo cases |
 | [docs/timed_defense_rehearsal_ru.md](timed_defense_rehearsal_ru.md) | exists | тайминг репетиции защиты |
 | [docs/presentations/game-intelligence-ml-defense.pptx](presentations/game-intelligence-ml-defense.pptx) | exists | 12-slide PPTX deck |
