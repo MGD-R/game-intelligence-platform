@@ -47,10 +47,14 @@ Final demo cases RU: [docs/final_demo_cases_ru.md](docs/final_demo_cases_ru.md).
 Final defense smoke checklist RU:
 [docs/final_defense_smoke_checklist_ru.md](docs/final_defense_smoke_checklist_ru.md).
 Timed defense rehearsal RU: [docs/timed_defense_rehearsal_ru.md](docs/timed_defense_rehearsal_ru.md).
+Live demo backup notebook:
+[notebooks/04_live_demo_cases.ipynb](notebooks/04_live_demo_cases.ipynb).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
 IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
 Russian platform analytics summary: [docs/platform_analytics_ru.md](docs/platform_analytics_ru.md).
+Final plan gap analysis RU: [docs/final_plan_gap_analysis_ru.md](docs/final_plan_gap_analysis_ru.md).
+Future work RU: [docs/future_work_ru.md](docs/future_work_ru.md).
 
 ## Quick Start
 
@@ -236,6 +240,12 @@ make igdb-staging
 The catalog, recommendation, review, explanation, and stats endpoints are read-only demo
 endpoints. They read PostgreSQL when available and fall back to generated ML defense artifacts
 where a database table is unavailable or the local database is not populated.
+
+Demo API notes:
+
+- `POST /recommend` accepts either `seed_game_ids` or `liked_games` title strings.
+- `GET /matches/review` accepts `review_status` and `decision` filters.
+- Explanation endpoints include `explanation_ru`, `facts_used`, and `sources_used` fields.
 
 ## Docker Profiles
 

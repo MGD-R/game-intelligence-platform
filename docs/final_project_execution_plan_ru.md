@@ -187,6 +187,14 @@ Acceptance criteria:
 9. `GET /explain/match` - реализовано.
 10. tests for P0 API demo endpoints - реализовано.
 11. docs update - реализовано.
+12. `POST /recommend` accepts `liked_games` by title - реализовано.
+13. `GET /matches/review` supports `decision` filter - реализовано.
+14. explanation endpoints return `explanation_ru`, `facts_used`, `sources_used` -
+    реализовано.
+15. `docs/ml_error_analysis_ru.md` - реализовано.
+16. `docs/final_plan_gap_analysis_ru.md` - реализовано.
+17. `docs/future_work_ru.md` - реализовано.
+18. `notebooks/04_live_demo_cases.ipynb` backup demo - реализовано.
 
 Следующий P0-шаг:
 

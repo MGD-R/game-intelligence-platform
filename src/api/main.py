@@ -28,6 +28,7 @@ LOGGER = configure_logging()
 
 class RecommendationRequest(BaseModel):
     seed_game_ids: list[str] = Field(default_factory=list)
+    liked_games: list[str] = Field(default_factory=list)
     limit: int = Field(default=10, ge=1, le=50)
 
 
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     def recommend_games(request: RecommendationRequest) -> dict[str, Any]:
         return recommendations(
             seed_game_ids=request.seed_game_ids,
+            liked_games=request.liked_games,
             limit=request.limit,
         )
 
@@ -113,8 +115,9 @@ def create_app() -> FastAPI:
     def list_review_matches(
         limit: int = Query(default=20, ge=1, le=100),
         review_status: str = Query(default="pending"),
+        decision: str = Query(default="all"),
     ) -> dict[str, Any]:
-        return review_matches(limit=limit, status_filter=review_status)
+        return review_matches(limit=limit, status_filter=review_status, decision_filter=decision)
 
     @app.get("/stats/catalog")
     def catalog_stats() -> dict[str, Any]:
@@ -126,11 +129,15 @@ def create_app() -> FastAPI:
 
     @app.get("/explain/recommendation")
     def explain_recommendation(
+        game_id: str | None = Query(default=None),
+        recommended_game_id: str | None = Query(default=None),
         seed_game: str | None = Query(default=None),
         recommended_game: str | None = Query(default=None),
         limit: int = Query(default=5, ge=1, le=25),
     ) -> dict[str, Any]:
         return recommendation_explanations(
+            game_id=game_id,
+            recommended_game_id=recommended_game_id,
             seed_game=seed_game,
             recommended_game=recommended_game,
             limit=limit,

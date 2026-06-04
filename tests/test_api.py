@@ -138,6 +138,22 @@ def test_recommend_returns_seeded_recommendations() -> None:
     assert isinstance(body["items"], list)
 
 
+def test_recommend_accepts_liked_game_names() -> None:
+    response = client.post(
+        "/recommend",
+        json={"liked_games": ["DOOM"], "limit": 2},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data_origin"] in {"database", "artifact"}
+    assert body["limit"] == 2
+    assert body["algorithm"] == "content_jaccard_v1"
+    assert body["liked_games"] == ["DOOM"]
+    assert "resolved_liked_games" in body
+    assert isinstance(body["items"], list)
+
+
 def test_review_matches_returns_readonly_queue() -> None:
     response = client.get("/matches/review?limit=2&review_status=all")
 
@@ -149,14 +165,46 @@ def test_review_matches_returns_readonly_queue() -> None:
     assert isinstance(body["items"], list)
 
 
+def test_review_matches_accepts_decision_filter() -> None:
+    response = client.get("/matches/review?limit=2&review_status=all&decision=no_merge")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data_origin"] in {"database", "artifact"}
+    assert body["decision_filter"] == "no_merge"
+    assert isinstance(body["items"], list)
+
+
 def test_recommendation_explanation_returns_grounded_examples() -> None:
     response = client.get("/explain/recommendation?limit=2")
 
     assert response.status_code == 200
     body = response.json()
-    assert body["data_origin"] == "artifact"
+    assert body["data_origin"] in {"database", "artifact"}
     assert body["limit"] == 2
     assert isinstance(body["items"], list)
+    if body["items"]:
+        item = body["items"][0]
+        assert "explanation_ru" in item
+        assert "facts_used" in item
+        assert "sources_used" in item
+
+
+def test_recommendation_explanation_accepts_game_ids() -> None:
+    response = client.get(
+        "/explain/recommendation?game_id=015078c4-059b-5a5f-ab7e-e8a43d3912eb&limit=2"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data_origin"] in {"database", "artifact"}
+    assert body["limit"] == 2
+    assert isinstance(body["items"], list)
+    if body["items"]:
+        item = body["items"][0]
+        assert "explanation_ru" in item
+        assert "facts_used" in item
+        assert "sources_used" in item
 
 
 def test_match_explanation_returns_grounded_examples() -> None:
@@ -167,3 +215,8 @@ def test_match_explanation_returns_grounded_examples() -> None:
     assert body["data_origin"] == "artifact"
     assert body["limit"] == 2
     assert isinstance(body["items"], list)
+    if body["items"]:
+        item = body["items"][0]
+        assert "explanation_ru" in item
+        assert "facts_used" in item
+        assert "sources_used" in item

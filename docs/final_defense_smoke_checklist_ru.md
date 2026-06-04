@@ -158,6 +158,9 @@ python3 -m nbconvert --execute --to notebook \
 | Artifact | Status | Purpose |
 |---|---|---|
 | [docs/platform_analytics_ru.md](platform_analytics_ru.md) | exists | полное русское описание платформы |
+| [docs/final_plan_gap_analysis_ru.md](final_plan_gap_analysis_ru.md) | exists | сверка исходного плана и текущего состояния |
+| [docs/ml_error_analysis_ru.md](ml_error_analysis_ru.md) | exists | анализ ошибок и threshold trade-off |
+| [docs/future_work_ru.md](future_work_ru.md) | exists | отделение текущей реализации от future work |
 | [docs/ml_research_findings.md](ml_research_findings.md) | exists | ML findings |
 | [docs/ml_research_defense_runbook.md](ml_research_defense_runbook.md) | exists | сценарий объяснения ML-части |
 | [docs/model_card.md](model_card.md) | exists | model card |
@@ -165,6 +168,7 @@ python3 -m nbconvert --execute --to notebook \
 | [docs/final_demo_cases_ru.md](final_demo_cases_ru.md) | exists | проверенные demo cases |
 | [docs/timed_defense_rehearsal_ru.md](timed_defense_rehearsal_ru.md) | exists | тайминг репетиции защиты |
 | [docs/presentations/game-intelligence-ml-defense.pptx](presentations/game-intelligence-ml-defense.pptx) | exists | 12-slide PPTX deck |
+| [notebooks/04_live_demo_cases.ipynb](../notebooks/04_live_demo_cases.ipynb) | exists | offline backup demo notebook |
 
 Readiness target:
 
