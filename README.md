@@ -40,9 +40,15 @@ Entity Resolution baseline: [docs/entity_resolution_baseline.md](docs/entity_res
 ML research defense plan: [docs/ml_research_defense_plan.md](docs/ml_research_defense_plan.md).
 ML research findings: [docs/ml_research_findings.md](docs/ml_research_findings.md).
 ML research defense runbook: [docs/ml_research_defense_runbook.md](docs/ml_research_defense_runbook.md).
+Final project execution plan RU: [docs/final_project_execution_plan_ru.md](docs/final_project_execution_plan_ru.md).
+Demo script RU: [docs/demo_script_ru.md](docs/demo_script_ru.md).
+Final demo cases RU: [docs/final_demo_cases_ru.md](docs/final_demo_cases_ru.md).
+Final defense smoke checklist RU:
+[docs/final_defense_smoke_checklist_ru.md](docs/final_defense_smoke_checklist_ru.md).
 IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
 IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
+Russian platform analytics summary: [docs/platform_analytics_ru.md](docs/platform_analytics_ru.md).
 
 ## Quick Start
 
@@ -222,6 +228,12 @@ make igdb-staging
 - `GET /matches/review`
 - `GET /explain/recommendation`
 - `GET /explain/match`
+- `GET /stats/catalog`
+- `GET /stats/ml`
+
+The catalog, recommendation, review, explanation, and stats endpoints are read-only demo
+endpoints. They read PostgreSQL when available and fall back to generated ML defense artifacts
+where a database table is unavailable or the local database is not populated.
 
 ## Docker Profiles
 
