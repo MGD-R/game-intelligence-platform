@@ -13,11 +13,14 @@ This document tracks the remaining work after the current ML research readiness 
 - The first editable PPTX deck is available at
   `docs/presentations/game-intelligence-ml-defense.pptx`.
 
-## Next Practical Step
+## Current Practical Status
 
-Run a timed defense rehearsal using:
+Timed defense rehearsal material is available and should be used before the final presentation:
 
 - `docs/presentations/game-intelligence-ml-defense.pptx`
+- `docs/timed_defense_rehearsal_ru.md`
+- `docs/final_demo_cases_ru.md`
+- `docs/final_defense_smoke_checklist_ru.md`
 - `data/artifacts/reports/ml_defense_presentation/ml_defense_presentation_outline.md`
 - `data/artifacts/reports/ml_defense_presentation/ml_defense_slide_outline.csv`
 - `data/artifacts/reports/ml_defense_presentation/ml_defense_speaker_notes.md`
@@ -42,7 +45,7 @@ Recommended deck structure:
 - Neural multilingual embeddings for title/description matching.
 - LLM rendering over grounded fact cards without giving the LLM decision authority.
 - Additional IGDB search candidate calibration by query strategy and rank.
-- Timed defense rehearsal and slide pruning for the target presentation duration.
+- Additional slide pruning for the target presentation duration.
 
 ## Release Workflow
 

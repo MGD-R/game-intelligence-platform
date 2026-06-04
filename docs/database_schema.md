@@ -41,25 +41,32 @@ The `stg` schema normalizes source-specific data into source-centered tables:
 
 Metrics remain source-specific at this stage. RAWG, Steam, IGDB, and Wikimedia values are intentionally not merged into one shared score yet.
 
-## ML Preparation Layer
+## ML Layer
 
-The `ml` schema includes only early preparation tables:
+The `ml` schema now contains the ER preparation, manual review, prediction, and research
+support tables used by the demo:
 
 - `ml.entity_candidate_pairs`
 - `ml.entity_resolution_features`
+- `ml.entity_resolution_predictions`
+- `ml.entity_resolution_manual_reviews`
+- `ml.igdb_search_candidates`
 
-These tables define where blocking output and pairwise features will land. Model training, labels curation, and inference are intentionally out of scope for this stage.
+These tables support blocking, pairwise feature generation, manual supervision, model scoring,
+threshold decisions, and review queues.
 
 ## DM Layer
 
-The `dm` schema contains placeholder canonical catalog tables:
+The `dm` schema contains the canonical catalog and recommendation layer:
 
 - `dm.canonical_games`
 - `dm.canonical_game_sources`
 - `dm.canonical_game_aliases`
 - `dm.canonical_game_external_ids`
+- `dm.game_recommendations`
 
-They are created now so the target architecture is explicit, but they are not populated yet.
+These tables are populated by the current data/ER/recommendation pipeline and are read by the
+FastAPI demo endpoints.
 
 ## Runtime Validation
 

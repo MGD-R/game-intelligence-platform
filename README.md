@@ -4,12 +4,13 @@ Game Intelligence Platform is an educational end-to-end data and ML product for 
 
 ## MVP Scope
 
-- Sources: RAWG and Wikidata.
+- Sources: RAWG, Wikidata, Steam, Wikipedia, and IGDB targeted/search enrichment.
 - Storage: PostgreSQL with `raw`, `stg`, `ml`, `dm`, `meta` schemas.
 - API: FastAPI health endpoints plus read-only catalog, recommendation, review,
   explanation, and stats demo routes.
 - Runtime: Docker Compose with `postgres`, `app`, and `worker`.
-- Pipeline: Makefile entrypoints with safe TODO placeholders for later feature branches.
+- Pipeline: Makefile entrypoints for ingestion, staging, ER, recommendations, explanations,
+  defense artifacts, and demo/readiness checks.
 
 Optional profiles add MLflow + MinIO, JupyterLab, and pgAdmin without making them mandatory for the MVP.
 
@@ -18,7 +19,7 @@ Optional profiles add MLflow + MinIO, JupyterLab, and pgAdmin without making the
 ```text
 docker/     container definitions and PostgreSQL init scripts
 configs/    YAML configuration files
-src/        application, ingestion, preprocessing, ML, and RAG placeholders
+src/        application, ingestion, preprocessing, ML, RAG, and API code
 tests/      smoke tests
 docs/       project and deployment notes
 data/       local data directories kept out of Git
@@ -49,7 +50,7 @@ Final defense smoke checklist RU:
 Timed defense rehearsal RU: [docs/timed_defense_rehearsal_ru.md](docs/timed_defense_rehearsal_ru.md).
 Live demo backup notebook:
 [notebooks/04_live_demo_cases.ipynb](notebooks/04_live_demo_cases.ipynb).
-IGDB optional enrichment scaffold: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
+IGDB optional/search enrichment: [docs/igdb_enrichment.md](docs/igdb_enrichment.md).
 IGDB ML matching research plan: [docs/igdb_ml_matching_research_plan.md](docs/igdb_ml_matching_research_plan.md).
 Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre_api_download_readiness.md).
 Russian platform analytics summary: [docs/platform_analytics_ru.md](docs/platform_analytics_ru.md).
@@ -166,11 +167,15 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make ml-defense-all` rebuilds the full defense artifact package and runs the final readiness gate.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
 
-## First Controlled API Download
+## Historical First Controlled API Download
 
-The data preparation contour is implemented, but it should not be considered fully proven until the first live end-to-end run is completed and exported to a data-pack.
+The first controlled API download plan below is kept as historical runbook context. The
+current repository already contains completed data-preparation, enrichment, ER, canonical,
+recommendation, explanation, and defense-demo artifacts. For current defense status, use
+[docs/final_plan_gap_analysis_ru.md](docs/final_plan_gap_analysis_ru.md) and
+[docs/final_defense_smoke_checklist_ru.md](docs/final_defense_smoke_checklist_ru.md).
 
-Recommended first live sources:
+Original first-live source order:
 
 - `RAWG` for discovery-oriented metadata.
 - `Wikidata` for identity, aliases, external IDs, and sitelinks.
@@ -198,11 +203,14 @@ make ml-ready-data
 make export-data-pack
 ```
 
-This order keeps the first live run narrow and reproducible. It uses targeted Wikidata lookups derived from RAWG and avoids optional enrichments until the RAWG + Wikidata baseline has been verified locally.
+This order kept the original first live run narrow and reproducible. It remains useful when
+rebuilding from scratch, but it is no longer the current project completion status.
 
 ## Optional Enrichment After MVP
 
-Steam and Wikipedia are optional targeted enrichments. IGDB is optional advanced enrichment and remains disabled by default until dry-runs and a tiny live-check are explicitly approved.
+Steam and Wikipedia are targeted enrichments already supported by the current contour. IGDB is
+optional and targeted/search-based; it should still be enabled deliberately because it requires
+credentials and quota control.
 
 ```bash
 make steam-appids
@@ -265,8 +273,8 @@ Demo API notes:
 
 ## MVP vs Advanced
 
-The project now includes the full data-prepare contour, dry-run-safe optional IGDB scaffold,
-file-based restore tooling, and read-only FastAPI demo endpoints for catalog,
+The project now includes the full data-prepare contour, dry-run-safe optional/search IGDB
+support, file-based restore tooling, and read-only FastAPI demo endpoints for catalog,
 recommendations, review candidates, explanations, and platform statistics.
 Production-grade write APIs, interactive RAG chat, collaborative filtering, and frontend UI
 remain follow-up work.

@@ -729,14 +729,16 @@ reports + notebooks + readiness metrics -> speaker notes -> PPTX deck
 | [notebooks/entity_resolution_training_report.ipynb](../notebooks/entity_resolution_training_report.ipynb) | обучение/оценка ER baseline |
 | [notebooks/03_ml_research_defense_report.ipynb](../notebooks/03_ml_research_defense_report.ipynb) | единый notebook для защиты ML-исследований |
 
-## 12. Что еще необходимо для финальной работы
+## 12. Текущая готовность и остаточные шаги
 
 ### 12.1. Для защиты
 
-1. Провести timed rehearsal по PPTX и notebook.
-2. Понять лимит времени защиты и сократить deck под этот лимит.
-3. Выбрать 5-7 live demo artifacts, которые будут открываться на защите.
-4. Подготовить короткий устный сценарий:
+Текущий статус: материалы готовы для репетиции и защиты.
+
+1. Повторить timed rehearsal по PPTX, live API и notebook.
+2. Понять лимит времени защиты и при необходимости сократить deck под этот лимит.
+3. Использовать уже выбранные live demo artifacts из [docs/final_demo_cases_ru.md](final_demo_cases_ru.md).
+4. Использовать короткий устный сценарий из [docs/timed_defense_rehearsal_ru.md](timed_defense_rehearsal_ru.md):
    - 2 минуты про платформу;
    - 3-5 минут про данные;
    - 5-7 минут про ER/ML;
@@ -745,17 +747,14 @@ reports + notebooks + readiness metrics -> speaker notes -> PPTX deck
 
 ### 12.2. Для платформы как продукта
 
-1. Довести FastAPI endpoints от placeholder/demo логики до чтения реальных `dm`/`ml` таблиц:
-   - `/games`;
-   - `/games/{game_id}`;
-   - `/games/{game_id}/similar`;
-   - `/recommend`;
-   - `/matches/review`;
-   - `/explain/recommendation`;
-   - `/explain/match`.
-2. Добавить API demo scenario и smoke/integration tests.
-3. Зафиксировать contract для canonical catalog API.
-4. Добавить простой UI или Swagger demo script, если это нужно для защиты.
+1. Read-only FastAPI endpoints уже читают реальные `dm`/`ml` таблицы с artifact fallback:
+   `/games`, `/games/{game_id}`, `/games/{game_id}/similar`, `/recommend`,
+   `/matches/review`, `/explain/recommendation`, `/explain/match`, `/stats/catalog`,
+   `/stats/ml`.
+2. API demo scenario и smoke tests добавлены.
+3. Contract для canonical catalog API зафиксирован в README, demo docs и tests.
+4. Следующий продуктовый шаг - простой UI поверх уже готового API, если это потребуется
+   после защиты.
 
 ### 12.3. Для данных
 
@@ -783,9 +782,9 @@ reports + notebooks + readiness metrics -> speaker notes -> PPTX deck
 
 ### 12.6. Для Git/release
 
-1. После согласования материалов выполнить merge `feature/igdb-search-lane` в `develop`.
-2. Запустить `make ml-defense-all`.
-3. Запустить code quality checks.
+1. Ветка `feature/igdb-search-lane` опубликована в GitHub.
+2. После согласования материалов выполнить merge `feature/igdb-search-lane` в `develop`.
+3. Перед финальной сдачей по возможности запустить `make ml-defense-all`.
 4. Merge в `main` делать только после явного подтверждения.
 
 ## 13. Итоговая формулировка для защиты

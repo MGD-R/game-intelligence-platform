@@ -2,7 +2,7 @@
 
 ## Scope
 
-Controlled full data loading and ML-ready dataset preparation run based on:
+Historical controlled full data loading and ML-ready dataset preparation run based on:
 
 - `RAWG` wide discovery
 - `Wikidata` targeted identity by RAWG
@@ -137,10 +137,14 @@ Validated against `data_packs/gip_full_ml_ready_v1`:
 
 ## Next ML Steps
 
-1. Train baseline ER model on `data/processed/entity_candidate_pairs.parquet` and `data/processed/entity_resolution_feature_base.parquet`.
-2. Review `data/processed/manual_review_seed.parquet` to label ambiguous pairs.
-3. Add optional `IGDB` only after a data source with real IGDB IDs is available in Wikidata staging.
-4. Extend recommendation features with Wikipedia/Steam signals now that the corpus has broader descriptions and metadata.
+These steps were completed or superseded by later project stages:
+
+1. ER model training, prediction, threshold analysis and manual review are implemented.
+2. IGDB search-lane matching research is implemented as optional targeted enrichment.
+3. Recommendations, Bayesian rating, graph analysis, embeddings, and grounded explanations
+   are available as defense artifacts.
+4. Read-only FastAPI demo endpoints expose catalog, recommendations, review candidates,
+   explanations and stats.
 
 ## Notes
 

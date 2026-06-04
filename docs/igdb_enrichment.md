@@ -13,7 +13,9 @@ IGDB is an optional advanced enrichment source. It is not used for first-pass di
 
 - IGDB requires Twitch OAuth2 client-credentials flow;
 - it is quota-constrained and should not run before the core RAWG + Wikidata contour is stable;
-- this repository currently provides a dry-run-safe scaffold and staging transform, not a default live ingestion path.
+- this repository provides dry-run-safe checks, targeted ID loading, search-based retrieval,
+  staging transforms, and matching-analysis artifacts; IGDB is still optional and not part of
+  the default first-pass pipeline.
 
 ## Auth
 
@@ -38,7 +40,7 @@ python -m src.ingestion.igdb_auth --dry-run
 - API base: `https://api.igdb.com/v4`
 - token endpoint: `https://id.twitch.tv/oauth2/token`
 - request style: `POST` + APICalypse query body
-- limits in current scaffold:
+- configured request limits:
   - `4` requests/sec
   - `max 8` concurrent requests
   - `max 500` IDs per request
@@ -116,7 +118,8 @@ This keeps IGDB auditable as a retrieval source before it is trusted as a full m
 
 ## Limitations
 
-- IGDB is scaffolded for dry-run validation and targeted batch loading by IDs.
+- IGDB supports dry-run validation, targeted batch loading by IDs, and search-based candidate
+  retrieval from the RAWG corpus.
 - Search-based matching is intentionally conservative and retrieval-first. It does not auto-merge records by itself.
 - It is still optional and not part of default `make demo-data`.
 - First live download should still start with RAWG + Wikidata, then data quality, then optional enrichments.

@@ -122,7 +122,7 @@ docker compose config -q
 |---|---|
 | `compileall src` | passed |
 | `ruff check src tests` | passed |
-| `pytest tests/test_api.py` | `14 passed` |
+| `pytest tests/test_api.py` | `17 passed` |
 | `docker compose config -q` | passed |
 
 ## 5. Notebook Smoke

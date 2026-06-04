@@ -47,7 +47,7 @@ FastAPI был главным слабым местом demo-интерфейс�
 Результат:
 
 - этот execution plan;
-- список текущих API-заглушек;
+- подтверждение, что прежние API-заглушки заменены read-only demo endpoints;
 - подтверждение доступных `dm/ml/stg` таблиц и generated artifacts.
 
 Acceptance criteria:
@@ -213,5 +213,6 @@ Acceptance criteria:
 3. При необходимости обновить presentation outline на основе выбранных demo cases -
    следующий optional шаг.
 
-Текущий статус: `GO` для финального demo smoke. Следующий practical step: либо обновить PPTX
-под новые API/demo cases, либо зафиксировать изменения коммитом.
+Текущий статус: `GO` для финального demo smoke. Ветка `feature/igdb-search-lane`
+опубликована в GitHub; следующий practical step - финальная репетиция, optional
+`make ml-defense-all`, затем merge в `develop` после подтверждения.
