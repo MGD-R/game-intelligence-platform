@@ -17,7 +17,7 @@ This is not meant to replace the current deterministic `RAWG <-> Wikidata` path.
 
 ## Current State
 
-Current full data snapshot:
+Initial planning snapshot:
 
 - `rawg source games = 400`
 - `wikidata source games = 385`
@@ -28,10 +28,37 @@ Current full data snapshot:
 - `igdb game count = 0`
 - `wikidata igdb id count = 0`
 
-Current implication:
+Initial implication:
 
 - the project is ready for baseline ER research on `RAWG <-> Wikidata`;
 - the project is not yet ready for real `IGDB` matching experiments because there are no live IGDB rows in staging.
+
+## Implemented IGDB Search-Lane Snapshot
+
+The IGDB search-based lane is now implemented and can be analyzed with:
+
+```bash
+make igdb-matching-analysis
+```
+
+Current generated snapshot:
+
+- `IGDB search candidates = 10,730`
+- `IGDB staged games = 10,344`
+- `RAWG anchors with IGDB candidates = 5,686`
+- `reviewed IGDB pairs = 1,637`
+- `reviewed positives = 925`
+- `reviewed negatives = 712`
+- `rank-1 reviewed precision = 0.928719`
+- `rank 2-3 reviewed precision = 0.052392`
+
+Current implication:
+
+- IGDB is now a real search-based candidate lane;
+- rank-1 candidates are strong under current reviewed sampling;
+- lower-rank candidates are mostly useful for manual review, hard negatives and ambiguity
+  analysis;
+- IGDB enrichment fields are useful for downstream ER and recommendation research.
 
 ## Research Goal
 

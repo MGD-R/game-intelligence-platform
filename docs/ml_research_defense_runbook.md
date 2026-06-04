@@ -14,6 +14,7 @@ Run these commands before the defense rehearsal:
 make er-merge-strategy-comparison
 make er-graph-analysis
 make er-embedding-research
+make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
 ```
@@ -27,6 +28,9 @@ Expected generated artifacts:
 - `data/artifacts/reports/graph_analysis/high_probability_reviewed_negatives.csv`
 - `data/artifacts/reports/embedding_research/embedding_model_comparison.csv`
 - `data/artifacts/reports/embedding_research/embedding_error_cases.csv`
+- `data/artifacts/reports/igdb_matching/igdb_matching_summary.json`
+- `data/artifacts/reports/igdb_matching/igdb_review_precision_by_rank.csv`
+- `data/artifacts/reports/igdb_matching/igdb_enrichment_coverage.csv`
 - `data/artifacts/reports/ml_research_defense/ml_research_defense_summary.json`
 - `data/artifacts/reports/ml_research_defense/ablation_study.csv`
 - `data/artifacts/reports/ml_research_defense/calibration_bins.csv`
@@ -39,6 +43,8 @@ Expected generated artifacts:
 - `data/artifacts/reports/ml_research_defense/charts/recommendation_score_distribution.svg`
 - `data/artifacts/reports/graph_analysis/same_source_duplicate_links.svg`
 - `data/artifacts/reports/embedding_research/embedding_model_f1.svg`
+- `data/artifacts/reports/igdb_matching/igdb_rank_distribution.svg`
+- `data/artifacts/reports/igdb_matching/igdb_enrichment_coverage.svg`
 - `data/artifacts/reports/bayesian_rating/bayesian_rating_summary.md`
 - `data/artifacts/reports/bayesian_rating/canonical_bayesian_ratings.csv`
 - `data/artifacts/reports/bayesian_rating/low_vote_shrinkage_examples.csv`
@@ -239,7 +245,39 @@ Evidence:
 - `embedding_error_cases.csv`
 - `embedding_model_f1.svg`
 
-### 9. Active Learning Casebook
+### 9. IGDB-Specific Matching Analysis
+
+Message:
+
+> IGDB is now a real search-based ER candidate source. Rank and confidence analysis
+> show where IGDB retrieval is reliable and where lower-rank candidates should be
+> treated as manual-review or negative examples.
+
+Show:
+
+- candidate and RAWG anchor counts;
+- reviewed precision by IGDB search rank;
+- enrichment coverage;
+- high-risk reviewed negatives and likely positives.
+
+Current snapshot:
+
+- `10,730` IGDB search candidates.
+- `10,344` staged IGDB games.
+- `5,686` RAWG anchors with IGDB candidates.
+- `1,637` reviewed IGDB pairs.
+- Rank-1 reviewed precision: `0.928719`.
+- Rank 2-3 reviewed precision: `0.052392`.
+
+Evidence:
+
+- `igdb_matching_summary.json`
+- `igdb_review_precision_by_rank.csv`
+- `igdb_enrichment_coverage.csv`
+- `igdb_high_risk_reviewed_negatives.csv`
+- `igdb_rank_distribution.svg`
+
+### 10. Active Learning Casebook
 
 Message:
 
@@ -257,7 +295,7 @@ Evidence:
 - `active_learning_candidates.csv`
 - `defense_demo_cases.csv`
 
-### 10. Recommendations As Secondary ML Block
+### 11. Recommendations As Secondary ML Block
 
 Message:
 
@@ -279,7 +317,7 @@ Evidence:
 - `charts/recommendation_score_distribution.svg`
 - `dm.game_recommendations`
 
-### 11. Bayesian Rating As Secondary Statistics Block
+### 12. Bayesian Rating As Secondary Statistics Block
 
 Message:
 
@@ -316,10 +354,11 @@ Evidence:
 | Why are negative labels needed? | They teach the model franchise/remaster/DLC boundaries and prevent similar titles from being merged blindly. |
 | Why graph analysis? | It reveals component-level and transitive merge risks that pair-level metrics can hide. |
 | Why lightweight embeddings? | They show the value of vector similarity without requiring non-reproducible external model downloads. |
+| Why IGDB analysis? | It proves IGDB search quality is rank-dependent and shows which enrichment fields justify keeping IGDB in the corpus. |
 | Why Logistic Regression? | It is interpretable, fast, reproducible and sufficient for a strong baseline before neural embeddings. |
 | Is recommendation ML complete? | It is a content-based baseline. Collaborative filtering is out of scope without user interaction data. |
 | Why Bayesian rating? | It reduces ranking noise from low-vote source ratings and demonstrates a separate statistical ML block on top of canonical data. |
-| What is next? | Multilingual neural embeddings, better IGDB candidate quality, calibrated thresholds and grounded RAG explanations. |
+| What is next? | Multilingual neural embeddings, calibrated thresholds and grounded RAG explanations. |
 
 ## Final Defense Claim
 

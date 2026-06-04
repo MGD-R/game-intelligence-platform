@@ -116,6 +116,7 @@ make er-baseline
 make er-merge-strategy-comparison
 make er-graph-analysis
 make er-embedding-research
+make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
 make quota-status
@@ -140,6 +141,7 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make er-baseline` builds the weak-label training dataset, runs rule and Logistic Regression baselines, predicts matches, evaluates metrics, and prepares a manual review queue without external APIs.
 `make er-graph-analysis` builds shadow ER graph/component risk artifacts without changing canonical tables.
 `make er-embedding-research` builds a lightweight TF-IDF/SVD title embedding research report for reviewed ER pairs.
+`make igdb-matching-analysis` builds IGDB search-lane retrieval, review-quality, and enrichment-coverage artifacts.
 `make ml-research-defense` builds defense-ready research artifacts: baseline counts, ablation study, calibration analysis, active-learning candidates, and recommendation examples.
 `make bayesian-rating` builds a secondary research report that compares naive weighted source ratings with Bayesian-adjusted ratings for canonical games.
 `make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.

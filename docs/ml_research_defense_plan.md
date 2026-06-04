@@ -37,6 +37,8 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
      risky clusters and high-probability reviewed negatives.
    - Lightweight title embeddings: TF-IDF/SVD cosine similarities and Logistic Regression
      comparison against fuzzy `name_similarity`.
+   - IGDB-specific matching analysis: retrieval rank precision, query strategies,
+     high-risk negatives and enrichment coverage.
 
 4. **Recommendations as secondary ML block**
    - Использовать `content_jaccard_v1` как explainable baseline.
@@ -59,6 +61,9 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
    - `embedding_model_comparison.csv`, `embedding_threshold_eval.csv`,
      `embedding_error_cases.csv` и `embedding_model_f1.svg` для title embedding
      research lane.
+   - `igdb_matching_summary.json`, `igdb_review_precision_by_rank.csv`,
+     `igdb_enrichment_coverage.csv` и `igdb_rank_distribution.svg` для IGDB
+     search-lane analysis.
    - `bayesian_rating_summary.md`, `canonical_bayesian_ratings.csv`,
      `low_vote_shrinkage_examples.csv` и `top_bayesian_ratings.svg` для демонстрации
      naive-vs-Bayesian ranking.
@@ -73,6 +78,7 @@ source data -> DQ -> candidate pairs -> manual review -> ER model
 make er-merge-strategy-comparison
 make er-graph-analysis
 make er-embedding-research
+make igdb-matching-analysis
 make ml-research-defense
 make bayesian-rating
 ```
@@ -83,6 +89,7 @@ Direct module command:
 python -m src.entity_resolution.build_research_defense_artifacts
 python -m src.entity_resolution.build_graph_analysis
 python -m src.entity_resolution.build_embedding_research
+python -m src.entity_resolution.build_igdb_matching_analysis
 python -m src.recommendations.build_bayesian_rating_analysis
 ```
 

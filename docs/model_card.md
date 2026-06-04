@@ -156,6 +156,36 @@ Known limitations:
 - The experiment uses reviewed ER pairs only and does not change canonical merge policy.
 - External neural embeddings remain a future research extension.
 
+## Source-Specific Research Block: IGDB Matching
+
+The project includes an IGDB search-based matching analysis. This evaluates IGDB as a
+candidate source and enrichment source, not as a blind canonical merge authority.
+
+Current generated snapshot:
+
+- IGDB search candidates: `10,730`.
+- Staged IGDB games: `10,344`.
+- RAWG anchors with IGDB candidates: `5,686`.
+- Reviewed IGDB pairs: `1,637`.
+- Reviewed positives: `925`.
+- Reviewed negatives: `712`.
+- Rank-1 reviewed precision: `0.928719`.
+- Rank 2-3 reviewed precision: `0.052392`.
+
+Purpose:
+
+- evaluate search-rank-dependent retrieval quality;
+- identify high-risk IGDB false positives;
+- measure IGDB enrichment coverage across descriptions, platforms, genres, companies,
+  themes, aliases, tags and ratings.
+
+Known limitations:
+
+- Reviewed precision reflects the current manual-review sampling strategy and is not a
+  random-sample estimate of full IGDB retrieval quality.
+- Lower-rank candidates are useful as negative/ambiguous examples, not as auto-merge inputs.
+- IGDB search candidates must still go through ER scoring and manual-review governance.
+
 ## Intended Use
 
 Recommended:
@@ -178,4 +208,5 @@ Not recommended:
 - Improve IGDB-specific candidate quality and alias coverage.
 - Use graph analysis outputs to review same-source duplicate components before expanding
   canonical merge policy.
+- Use IGDB rank/confidence analysis to tune candidate retrieval and manual-review sampling.
 - Tune Bayesian rating prior and add grounded RAG explanations as secondary research tracks.
