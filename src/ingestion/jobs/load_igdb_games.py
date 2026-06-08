@@ -34,6 +34,8 @@ def resolve_ids(client: IGDBClient, args) -> list[int]:  # type: ignore[no-untyp
             line.strip() for line in open(args.ids_file, "r", encoding="utf-8").read().splitlines()
         )
     if not raw_ids:
+        if getattr(args, "dry_run", False):
+            return []
         if client.repository is None:
             return []
         rows = client.repository.fetch_staging_rows(

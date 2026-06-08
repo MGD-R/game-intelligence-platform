@@ -37,6 +37,8 @@ def build_empty_result_record_id(seed: dict[str, object], query: dict[str, str])
 def load_seeds(client: IGDBClient, args) -> list[dict[str, object]]:  # type: ignore[no-untyped-def]
     if getattr(args, "input_file", None):
         return json.loads(Path(args.input_file).read_text(encoding="utf-8"))
+    if getattr(args, "dry_run", False):
+        return []
     if client.repository is None:
         return []
     rawg_rows = client.repository.fetch_staging_rows("stg.source_games", source="rawg")
