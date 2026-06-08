@@ -7,8 +7,12 @@ def test_demo_readiness_errors_when_required_directories_are_missing(tmp_path) -
     result = evaluate_demo_readiness(tmp_path)
 
     assert result["status"] == "error"
+    assert result["command_reference"]["path"] == "docs/demo_readiness_command_reference_ru.md"
+    assert result["missing_count"] > 0
     assert result["errors"]
     assert any("Missing required artifact" in item for item in result["errors"])
+    assert all(item["command"] for item in result["missing_artifacts"])
+    assert all(item["result"] for item in result["missing_artifacts"])
 
 
 def test_demo_readiness_warns_when_optional_artifacts_are_missing(tmp_path) -> None:
@@ -20,6 +24,7 @@ def test_demo_readiness_warns_when_optional_artifacts_are_missing(tmp_path) -> N
     assert not result["errors"]
     assert result["warnings"]
     assert result["recommendations"]
+    assert all(item["command"] for item in result["missing_artifacts"])
 
 
 def test_demo_readiness_ok_when_all_expected_artifacts_exist(tmp_path) -> None:
@@ -44,4 +49,8 @@ def test_demo_readiness_ok_when_all_expected_artifacts_exist(tmp_path) -> None:
 
     assert result["status"] == "ok"
     assert not result["missing_artifacts"]
+    assert result["missing_count"] == 0
+    assert all(item["command"] for item in result["found_artifacts"])
+    assert all(item["result"] for item in result["found_artifacts"])
     assert "Status: ok" in format_human_report(result)
+    assert "docs/demo_readiness_command_reference_ru.md" in format_human_report(result)

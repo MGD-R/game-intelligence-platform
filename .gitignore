@@ -32,6 +32,16 @@ Agents.md
 *.jsonl.gz
 *.parquet
 
+# Presentation deliverables and generated presentation workspaces
+/outputs/
+/docs/presentations/*.pptx
+/docs/presentations/*.pdf
+/docs/presentations/*.png
+/docs/presentations/*.html
+/docs/presentations/*.key
+/docs/defense_data_examples_ru.md
+/docs/presentation_revision_notes_ru.md
+
 # Python/cache
 __pycache__/
 *.py[cod]

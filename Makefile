@@ -2,8 +2,8 @@ COMPOSE := docker compose
 COMPOSE_DEV := $(COMPOSE) --profile dev
 WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
-.PHONY: build build-dev up up-dev up-mlops up-notebook up-ui up-admin down logs ps shell db-shell \
-	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
+.PHONY: build build-dev up up-dev up-mlops up-notebook up-ui up-ui-dev up-admin down logs ps shell db-shell \
+	db-check test test-db compile lint format compose-config ci-check check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-by-rawg wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata full-data-plan \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
@@ -38,7 +38,11 @@ up-notebook:
 	$(COMPOSE) --profile notebook up -d postgres app worker notebook
 
 up-ui:
-	$(COMPOSE) --profile ui up -d postgres app ui
+	$(COMPOSE) --profile ui up -d --build postgres app ui
+
+up-ui-dev:
+	$(COMPOSE_DEV) up -d --build postgres app-dev worker-dev
+	API_BASE_URL=http://app-dev:8000 $(COMPOSE) --profile ui up -d --build --no-deps ui
 
 up-admin:
 	$(COMPOSE) --profile admin up -d postgres app worker pgadmin
@@ -70,11 +74,23 @@ test-db:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m pytest tests/test_raw_idempotency.py
 
+compile:
+	$(WORKER_RUN) python -m compileall src tests
+
 lint:
 	$(WORKER_RUN) python -m ruff check src tests
 
 format:
 	$(WORKER_RUN) python -m ruff format src tests
+
+compose-config:
+	$(COMPOSE) --profile dev --profile notebook --profile ui --profile admin --profile mlops config -q
+
+ci-check:
+	$(MAKE) compile
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) compose-config
 
 check-sources:
 	$(WORKER_RUN) python -m src.ingestion.check_sources --no-network

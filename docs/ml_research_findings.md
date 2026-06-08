@@ -100,6 +100,16 @@ TF-IDF/SVD title vectors и Logistic Regression. Это дает воспрои�
 - Best F1: `0.974026`.
 - Error-case rows: `35`.
 
+Дополнительная проверка после hardening-аудита:
+
+- `ml_research_defense_summary.json` теперь содержит блок `grouped_holdout`.
+- `grouped_holdout_metrics.csv` удерживает целые группы `source_a/source_id_a`, а не случайные
+  отдельные пары.
+- Этот отчёт нужен для честного сравнения: random split показывает качество на смешанных
+  candidate-парах, grouped holdout лучше выявляет переобучение на повторяющихся source patterns.
+- Production merge policy должна опираться на threshold analysis, manual review, graph risk и
+  grouped holdout, а не только на одну random-split метрику.
+
 Сравнение моделей:
 
 | Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |

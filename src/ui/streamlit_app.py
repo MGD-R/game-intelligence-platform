@@ -28,6 +28,23 @@ def show_warnings(payload: dict[str, Any]) -> None:
         st.warning(warning)
 
 
+def render_artifact_table(items: list[dict[str, Any]]) -> None:
+    if not items:
+        st.info("No artifacts in this group.")
+        return
+    columns = [
+        "name",
+        "required",
+        "exists",
+        "command",
+        "result",
+        "recommendation",
+        "path",
+    ]
+    rows = [{column: item.get(column) for column in columns} for item in items]
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
 def render_stats() -> None:
     st.header("Stats and Readiness")
     catalog = api_get("/stats/catalog")
@@ -38,7 +55,37 @@ def render_stats() -> None:
     cols[1].metric("Canonical games", catalog.get("canonical_games", 0))
     cols[2].metric("Candidate pairs", ml.get("candidate_pairs", 0))
     st.subheader("Readiness")
-    st.json(readiness)
+    status = readiness.get("status", "unknown")
+    if status == "ok":
+        st.success("Demo data and required defense artifacts are ready.")
+    elif status == "warning":
+        st.warning("Required artifacts exist, but recommended demo artifacts are missing.")
+    else:
+        st.error("Required demo artifacts are missing.")
+
+    reference = readiness.get("command_reference") or {}
+    reference_path = reference.get("path")
+    if reference_path:
+        st.info(
+            "Command explanations are documented in "
+            f"`{reference_path}`. {reference.get('description', '')}"
+        )
+
+    found_artifacts = readiness.get("found_artifacts") or []
+    missing_artifacts = readiness.get("missing_artifacts") or []
+    found_tab, missing_tab, raw_tab = st.tabs(
+        [
+            f"Found artifacts ({len(found_artifacts)})",
+            f"Missing artifacts ({len(missing_artifacts)})",
+            "Raw JSON",
+        ]
+    )
+    with found_tab:
+        render_artifact_table(found_artifacts)
+    with missing_tab:
+        render_artifact_table(missing_artifacts)
+    with raw_tab:
+        st.json(readiness)
     show_warnings(catalog)
     show_warnings(ml)
 
@@ -80,10 +127,28 @@ def render_recommendations() -> None:
 
 def render_manual_review() -> None:
     st.header("Manual Review Queue")
-    status = st.selectbox("Status", ["pending", "reviewed", "all"])
+    ml = api_get("/stats/ml")
+    cols = st.columns(4)
+    cols[0].metric("Labeled pairs", ml.get("labeled_pairs", 0))
+    cols[1].metric("Positive labels", ml.get("manual_positive_labels", 0))
+    cols[2].metric("Negative labels", ml.get("manual_negative_labels", 0))
+    cols[3].metric("Candidate pairs", ml.get("candidate_pairs", 0))
+
+    st.caption(
+        "Default view shows reviewed labels used as ER model supervision. "
+        "Pending can be empty when the current queue has already been reviewed or skipped."
+    )
+    status = st.selectbox("Status", ["pending", "reviewed", "all"], index=1)
     payload = api_get("/matches/review", {"limit": 50, "review_status": status})
     show_warnings(payload)
-    st.dataframe(payload.get("items") or [])
+    items = payload.get("items") or []
+    if not items:
+        st.info(
+            "No rows for this filter. Try `reviewed` or `all`, or rebuild the queue with "
+            "`make er-review-queue && make er-export-review-queue`."
+        )
+    else:
+        st.dataframe(items, use_container_width=True, hide_index=True)
     st.caption("Write updates are available through PATCH /matches/review/{pair_id}.")
 
 

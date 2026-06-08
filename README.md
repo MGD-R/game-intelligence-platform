@@ -199,6 +199,9 @@ Makefile commands needed to rebuild missing data. The same information is availa
 curl http://localhost:8000/stats/readiness
 ```
 
+Command explanations for readiness recommendations are documented in
+[docs/demo_readiness_command_reference_ru.md](docs/demo_readiness_command_reference_ru.md).
+
 ## Historical First Controlled API Download
 
 The first controlled API download plan below is kept as historical runbook context. The
@@ -291,7 +294,10 @@ Demo API notes:
   `algorithm=hybrid_content_rating_v1`.
 - `GET /matches/review` accepts `review_status` and `decision` filters.
 - `PATCH /matches/review/{pair_id}` updates PostgreSQL manual review rows only; artifact
-  fallback is read-only. If `GIP_WRITE_API_KEY` is set, pass it as `X-GIP-Write-API-Key`.
+  fallback is read-only. In non-local/non-demo environments `GIP_WRITE_API_KEY` is required;
+  pass it as `X-GIP-Write-API-Key`.
+- Set `GIP_STRICT_DB_MODE=true` to disable silent artifact fallback and fail fast on database
+  read errors during production-like checks.
 - Explanation endpoints include `explanation_ru`, `facts_used`, and `sources_used` fields.
   They accept `mode=template|llm`; LLM mode is disabled by default and falls back to grounded
   template text unless an approved provider is configured.
@@ -303,7 +309,12 @@ Demo API notes:
 - `make up-mlops` adds `mlflow` and `minio`.
 - `make up-notebook` adds `notebook`.
 - `make up-ui` starts the optional Streamlit demo UI on port `8501`.
+- `make up-ui-dev` starts the Streamlit UI against the live-reload `app-dev` service.
 - `make up-admin` adds `pgadmin`.
+
+UI runtime note: `make up-ui` uses the runtime `app` service and rebuilds the API/UI images.
+Do not run it at the same time as `make up-dev`, because both `app` and `app-dev` publish host
+port `8000`. If the dev stack is already running, use `make up-ui-dev` instead.
 
 ## Security Notes
 
@@ -311,6 +322,10 @@ Demo API notes:
 - Store real external API tokens in `.env.secrets`; keep `.env` for non-secret local defaults.
 - Commit only examples such as `.env.example` and `.env.secrets.example`.
 - Replace all placeholder credentials before using external APIs.
+- Configure `GIP_WRITE_API_KEY` before exposing `PATCH /matches/review/{pair_id}` outside a
+  local/demo environment.
+- Use `GIP_STRICT_DB_MODE=true` for hardening checks where stale artifact fallback must not hide
+  database regressions.
 - Health endpoints return status information only and do not expose secrets.
 
 ## MVP vs Advanced
@@ -322,3 +337,14 @@ manual-review write updates, optional Streamlit UI, notebook export checks, and 
 optional embedding/graph/hybrid recommendation research lanes.
 Production-grade auth, interactive RAG chat, collaborative filtering, and full frontend UX
 remain follow-up work.
+
+## Local CI Gate
+
+Run the consolidated local quality gate before opening a PR:
+
+```bash
+make ci-check
+```
+
+It runs Python compilation, `ruff`, `pytest`, and Docker Compose config validation. Demo/data-pack
+checks remain separate because they require prepared local artifacts.

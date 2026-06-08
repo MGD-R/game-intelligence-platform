@@ -145,10 +145,15 @@
 
 Что потребуется:
 
-- CI workflow: `ruff`, `pytest`, `docker compose config`, `api-smoke`;
+- CI workflow: базовый GitHub Actions и `make ci-check` уже добавлены для `compileall`,
+  `ruff`, `pytest`, `docker compose config`; `api-smoke` остаётся локальным pre-demo gate,
+  потому что требует запущенного API и подготовленных artifacts.
 - migrations instead of init-only SQL;
 - response schemas and API contract tests;
-- API auth policy;
+- API auth policy: `PATCH /matches/review/{pair_id}` теперь требует `GIP_WRITE_API_KEY`
+  вне local/demo окружения; полноценная user/session auth остаётся future work.
+- strict DB mode: `GIP_STRICT_DB_MODE=true` отключает тихий artifact fallback и помогает
+  ловить DB regressions в production-like проверках.
 - DVC/object storage for data/model versioning;
 - release workflow: feature branch -> `develop` -> `main` after approval.
 

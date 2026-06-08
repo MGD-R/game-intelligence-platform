@@ -75,9 +75,20 @@ def error_response(
 
 
 def validate_write_api_key(header_value: str | None) -> JSONResponse | None:
-    expected_key = os.getenv("GIP_WRITE_API_KEY")
+    expected_key = os.getenv("GIP_WRITE_API_KEY", "").strip()
+    app_env = os.getenv("APP_ENV", "local").strip().lower()
+    demo_mode = os.getenv("DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
     if not expected_key:
-        return None
+        if app_env in {"local", "dev", "development", "demo", "test"} or demo_mode:
+            return None
+        return error_response(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            code="write_api_key_not_configured",
+            message=(
+                "GIP_WRITE_API_KEY must be configured before write endpoints can be used "
+                "outside local/demo environments."
+            ),
+        )
     if header_value == expected_key:
         return None
     return error_response(
@@ -203,7 +214,7 @@ def create_app() -> FastAPI:
         label_value = review_label_to_bool(request.review_label)
         if request.review_status == "reviewed" and label_value is None:
             return error_response(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 code="review_label_required",
                 message="review_status=reviewed requires review_label same_game or different_game.",
             )

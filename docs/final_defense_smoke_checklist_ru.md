@@ -113,7 +113,10 @@ curl "http://localhost:8000/games/015078c4-059b-5a5f-ab7e-e8a43d3912eb/similar?l
 - `mode=llm` не передает LLM право принимать решения; при `LLM_PROVIDER=none` возвращается
   template fallback с warning.
 - `PATCH /matches/review/{pair_id}` обновляет только PostgreSQL manual review rows. Artifact
-  fallback read-only.
+  fallback read-only. В non-local/non-demo режиме endpoint требует `X-GIP-Write-API-Key`,
+  равный `GIP_WRITE_API_KEY`.
+- Для проверки без artifact fallback можно включить `GIP_STRICT_DB_MODE=true`; тогда DB read
+  regressions не будут маскироваться подготовленными CSV/JSON отчётами.
 
 ## 4. Code Quality Smoke
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,25 @@ class ManualReviewNotFoundError(Exception):
 
 class ManualReviewDatabaseError(Exception):
     """Raised when manual review storage is unavailable."""
+
+
+def env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def strict_db_mode_enabled() -> bool:
+    """Return whether DB failures should fail fast instead of using artifact fallback."""
+
+    return env_flag("GIP_STRICT_DB_MODE")
+
+
+def handle_db_fallback_exception(exc: Exception) -> None:
+    if strict_db_mode_enabled():
+        raise exc
+    return None
 
 
 def optional_float(value: object) -> float | None:
@@ -150,7 +170,8 @@ def db_catalog_stats(repository: IngestionRepository | None = None) -> dict[str,
             with connection.cursor() as cursor:
                 cursor.execute(query)
                 row = cursor.fetchone() or {}
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     source_by_source = dict(row.get("source_games_by_source") or {})
@@ -224,7 +245,8 @@ def db_ml_stats(repository: IngestionRepository | None = None) -> dict[str, Any]
             with connection.cursor() as cursor:
                 cursor.execute(query)
                 row = cursor.fetchone() or {}
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     return {
@@ -399,7 +421,8 @@ def db_list_games(
             with connection.cursor() as cursor:
                 cursor.execute(query, (search_pattern, search_pattern, safe_limit, safe_offset))
                 rows = cursor.fetchall()
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     total = int(rows[0]["total"]) if rows else 0
@@ -575,7 +598,8 @@ def db_get_game(
             with connection.cursor() as cursor:
                 cursor.execute(query, (game_id,))
                 row = cursor.fetchone()
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     if not row:
@@ -667,7 +691,8 @@ def db_find_games_by_names(
                                 "release_year": row["release_year"],
                             }
                         )
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return []
     return output
 
@@ -737,7 +762,8 @@ def db_similar_games(
             with connection.cursor() as cursor:
                 cursor.execute(query, (game_id, algorithm, safe_limit))
                 rows = cursor.fetchall()
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     return {
@@ -948,7 +974,8 @@ def db_review_matches(
                     (status_filter, status_filter, decision_filter, decision_filter, safe_limit),
                 )
                 rows = cursor.fetchall()
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     return {
@@ -1179,7 +1206,8 @@ def db_recommendation_explanations(
                     (game_id, recommended_game_id, recommended_game_id, safe_limit),
                 )
                 rows = cursor.fetchall()
-    except Exception:
+    except Exception as exc:
+        handle_db_fallback_exception(exc)
         return None
 
     if not rows:

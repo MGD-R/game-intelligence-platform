@@ -97,6 +97,12 @@ Manual threshold analysis shows:
 - `0.90` is useful for high-confidence review candidates.
 - `0.70` is research-only because false positives and risky clusters appear.
 
+The generated research package also includes `grouped_holdout_metrics.csv`. This additional
+check holds out complete `source_a/source_id_a` groups instead of using only a random stratified
+pair split, making it a stricter signal for how well the ER model generalizes beyond repeated
+candidate patterns from the same source entity. It is a complementary research metric and does
+not replace the published `v3c` snapshot until regenerated on the final data pack.
+
 ## Known Limitations
 
 - Weak positives dominate the training data, so manual labels are explicitly weighted.
@@ -104,8 +110,9 @@ Manual threshold analysis shows:
 - Remasters, editions, DLCs and franchise titles remain high-risk cases.
 - Some source records still contain QID-like or low-quality names.
 - Recommendations are content-based only and do not use user interaction data.
-- Pair-level metrics do not fully capture transitive graph risk; component-level analysis is
-  required before any model-assisted production merge policy.
+- Random pair-level metrics do not fully capture transitive graph risk or repeated-source
+  leakage; grouped holdout and component-level analysis are required before any model-assisted
+  production merge policy.
 
 ## Secondary Research Block: Bayesian Rating
 

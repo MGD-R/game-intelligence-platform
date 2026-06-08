@@ -17,7 +17,7 @@ import polars as pl
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
 from sklearn.pipeline import Pipeline
 
 from src.entity_resolution.build_training_dataset import build_training_frame
@@ -303,29 +303,26 @@ def selected_feature_names(excluded_features: set[str]) -> list[str]:
     return [name for name in feature_columns() if name not in excluded_features]
 
 
-def train_and_score(
-    training_frame: pl.DataFrame,
+def grouped_holdout_key(row: dict[str, object]) -> str:
+    source = str(row.get("source_a") or "")
+    source_id = str(row.get("source_id_a") or "")
+    if source and source_id:
+        return f"{source}:{source_id}"
+    return str(row.get("pair_id") or "")
+
+
+def fit_logistic_and_score(
     *,
     selected_features: list[str],
+    X_train: list[list[object]],
+    y_train: list[int],
+    X_test: list[list[object]],
+    y_test: list[int],
+    train_rows: list[dict[str, object]],
+    test_rows: list[dict[str, object]],
     random_state: int,
     weight_policy: dict[str, float],
 ) -> dict[str, Any]:
-    prepared = training_frame.with_columns(
-        [
-            pl.col(column_name).cast(pl.Float64, strict=False).alias(column_name)
-            for column_name in selected_features
-        ]
-    )
-    X = prepared.select(selected_features).to_numpy().tolist()
-    y = prepared["label"].cast(pl.Int64).to_list()
-    X_train, X_test, y_train, y_test, train_rows, test_rows = train_test_split(
-        X,
-        y,
-        prepared.to_dicts(),
-        test_size=0.4,
-        random_state=random_state,
-        stratify=y if len(set(y)) > 1 else None,
-    )
     pipeline = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
@@ -361,6 +358,125 @@ def train_and_score(
         "y_true": y_test,
         "y_prob": y_prob,
         "selected_features": selected_features,
+    }
+
+
+def train_and_score(
+    training_frame: pl.DataFrame,
+    *,
+    selected_features: list[str],
+    random_state: int,
+    weight_policy: dict[str, float],
+) -> dict[str, Any]:
+    prepared = training_frame.with_columns(
+        [
+            pl.col(column_name).cast(pl.Float64, strict=False).alias(column_name)
+            for column_name in selected_features
+        ]
+    )
+    X = prepared.select(selected_features).to_numpy().tolist()
+    y = prepared["label"].cast(pl.Int64).to_list()
+    X_train, X_test, y_train, y_test, train_rows, test_rows = train_test_split(
+        X,
+        y,
+        prepared.to_dicts(),
+        test_size=0.4,
+        random_state=random_state,
+        stratify=y if len(set(y)) > 1 else None,
+    )
+    return fit_logistic_and_score(
+        selected_features=selected_features,
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+        train_rows=train_rows,
+        test_rows=test_rows,
+        random_state=random_state,
+        weight_policy=weight_policy,
+    )
+
+
+def build_grouped_holdout_report(training_frame: pl.DataFrame) -> dict[str, object]:
+    config = load_entity_resolution_config()
+    random_state = int(
+        config.get("model", {}).get("logistic_regression", {}).get("random_state", 42)
+    )
+    selected_features = feature_columns()
+    prepared = training_frame.with_columns(
+        [
+            pl.col(column_name).cast(pl.Float64, strict=False).alias(column_name)
+            for column_name in selected_features
+        ]
+    )
+    rows = prepared.to_dicts()
+    groups = [grouped_holdout_key(row) for row in rows]
+    unique_groups = sorted(set(groups))
+    report_base: dict[str, object] = {
+        "split": "grouped_source_a_holdout",
+        "group_key": "source_a/source_id_a",
+        "row_count": len(rows),
+        "group_count": len(unique_groups),
+        "feature_count": len(selected_features),
+        "sample_weight_policy": DEFAULT_MODEL_WEIGHT_POLICY,
+    }
+    if len(unique_groups) < 2:
+        return {
+            **report_base,
+            "status": "skipped",
+            "warnings": ["not enough groups for grouped holdout"],
+        }
+
+    X = prepared.select(selected_features).to_numpy().tolist()
+    y = [int(value) for value in prepared["label"].cast(pl.Int64).to_list()]
+    splitter = GroupShuffleSplit(n_splits=1, test_size=0.4, random_state=random_state)
+    train_indices, test_indices = next(splitter.split(X, y, groups=groups))
+    train_rows = [rows[index] for index in train_indices]
+    test_rows = [rows[index] for index in test_indices]
+    y_train = [y[index] for index in train_indices]
+    y_test = [y[index] for index in test_indices]
+
+    warnings_list: list[str] = []
+    if len(set(y_train)) < 2 or len(set(y_test)) < 2:
+        warnings_list.append(
+            "grouped split produced a single-class train or test partition; metrics skipped"
+        )
+        return {
+            **report_base,
+            "status": "skipped",
+            "train_row_count": len(train_rows),
+            "test_row_count": len(test_rows),
+            "train_group_count": len({groups[index] for index in train_indices}),
+            "test_group_count": len({groups[index] for index in test_indices}),
+            "warnings": warnings_list,
+        }
+
+    result = fit_logistic_and_score(
+        selected_features=selected_features,
+        X_train=[X[index] for index in train_indices],
+        y_train=y_train,
+        X_test=[X[index] for index in test_indices],
+        y_test=y_test,
+        train_rows=train_rows,
+        test_rows=test_rows,
+        random_state=random_state,
+        weight_policy=DEFAULT_MODEL_WEIGHT_POLICY,
+    )
+    metrics = result["metrics"]
+    return {
+        **report_base,
+        "status": "ok",
+        "train_row_count": len(train_rows),
+        "test_row_count": len(test_rows),
+        "train_group_count": len({groups[index] for index in train_indices}),
+        "test_group_count": len({groups[index] for index in test_indices}),
+        "precision": metrics["precision"],
+        "recall": metrics["recall"],
+        "f1": metrics["f1"],
+        "roc_auc": metrics["roc_auc"],
+        "pr_auc": metrics["pr_auc"],
+        "confusion_matrix": json.dumps(metrics["confusion_matrix"]),
+        "warnings": warnings_list,
     }
 
 
@@ -737,6 +853,7 @@ def write_markdown_summary(path: Path, summary: dict[str, Any]) -> None:
     baseline = summary["baseline_counts"]
     ablation_rows = summary["ablation_study"]
     calibration = summary["calibration"]
+    grouped_holdout = summary["grouped_holdout"]
     recommendations = summary["recommendations"]
     defense_demo_case_count = summary["defense_demo_case_count"]
     presentation_charts = summary["presentation_charts"]
@@ -771,6 +888,16 @@ def write_markdown_summary(path: Path, summary: dict[str, Any]) -> None:
             f"- Brier score: `{calibration['brier_score']}`",
             f"- Probability distribution: `{calibration['probability_distribution']}`",
             "",
+            "## Grouped Holdout",
+            "",
+            f"- Status: `{grouped_holdout['status']}`",
+            f"- Group key: `{grouped_holdout['group_key']}`",
+            f"- Train/test rows: `{grouped_holdout.get('train_row_count')}` / "
+            f"`{grouped_holdout.get('test_row_count')}`",
+            f"- F1: `{grouped_holdout.get('f1')}`",
+            f"- ROC-AUC: `{grouped_holdout.get('roc_auc')}`",
+            f"- Warnings: `{grouped_holdout.get('warnings')}`",
+            "",
             "## Recommendations",
             "",
             f"- Coverage: `{recommendations['coverage']}`",
@@ -802,6 +929,7 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
     baseline_counts = fetch_baseline_counts(repository)
     ablation_rows = build_ablation_rows(training_frame)
     calibration = build_calibration_report(training_frame)
+    grouped_holdout = build_grouped_holdout_report(training_frame)
     active_learning_candidates = fetch_active_learning_candidates(repository)
     recommendations = fetch_recommendation_examples(repository)
     defense_demo_cases = fetch_defense_demo_cases(repository)
@@ -817,6 +945,7 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
         },
         "ablation_study": ablation_rows,
         "calibration": calibration,
+        "grouped_holdout": grouped_holdout,
         "active_learning_candidate_count": len(active_learning_candidates),
         "defense_demo_case_count": len(defense_demo_cases),
         "recommendations": recommendations,
@@ -833,6 +962,7 @@ def build_research_defense_artifacts(output_dir: Path) -> dict[str, Any]:
         output_dir / "probability_distribution.csv",
         calibration["probability_distribution"],
     )
+    write_csv(output_dir / "grouped_holdout_metrics.csv", [grouped_holdout])
     write_csv(output_dir / "active_learning_candidates.csv", active_learning_candidates)
     write_csv(output_dir / "defense_demo_cases.csv", defense_demo_cases)
     write_csv(output_dir / "recommendation_examples.csv", recommendations["examples"])
