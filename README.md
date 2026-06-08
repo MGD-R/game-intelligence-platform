@@ -1,6 +1,13 @@
 # Game Intelligence Platform
 
-Game Intelligence Platform is an educational end-to-end data and ML product for building a canonical video game catalog from external sources and exposing it through a FastAPI service.
+Game Intelligence Platform is an educational end-to-end data and ML platform for
+building a canonical video game catalog from external sources and exposing the result
+through reproducible research artifacts, notebooks, FastAPI, and an optional Streamlit UI.
+
+The current project state is no longer a bootstrap scaffold. It contains a completed local
+demo contour for defense: ingestion/staging, data quality, Entity Resolution, manual review,
+canonical catalog, recommendations, Bayesian rating, graph-risk analysis, grounded
+explanations, API/UI, notebooks, and defense runbooks.
 
 ## MVP Scope
 
@@ -8,21 +15,43 @@ Game Intelligence Platform is an educational end-to-end data and ML product for 
 - Storage: PostgreSQL with `raw`, `stg`, `ml`, `dm`, `meta` schemas.
 - API: FastAPI health endpoints plus read-only catalog, recommendation, review,
   explanation, and stats demo routes.
-- Runtime: Docker Compose with `postgres`, `app`, and `worker`.
+- Runtime: Docker Compose with `postgres`, runtime `app`, dev `app-dev`/`worker-dev`,
+  optional `ui`, `notebook`, `pgadmin`, `mlflow`, and `minio`.
 - Pipeline: Makefile entrypoints for ingestion, staging, ER, recommendations, explanations,
   defense artifacts, and demo/readiness checks.
 
 Optional profiles add MLflow + MinIO, JupyterLab, and pgAdmin without making them mandatory for the MVP.
+
+## Current Demo Snapshot
+
+The latest local demo/data snapshot used for defense contains:
+
+| Area | Current value |
+|---|---:|
+| Source records | 31,462 |
+| Canonical games | 20,613 |
+| Canonical source links | 35,607 |
+| Canonical external IDs | 43,838 |
+| ER candidate pairs | 17,320 |
+| Manual reviewed labels | 1,966 |
+| Recommendation rows | 147,254 |
+| Grounded fact cards | 50 |
+
+Use `make demo-readiness` or `GET /stats/readiness` to verify the local artifacts before a
+rehearsal. Large data packs, generated reports, notebook exports, and PPTX files are intentionally
+kept out of Git.
 
 ## Repository Layout
 
 ```text
 docker/     container definitions and PostgreSQL init scripts
 configs/    YAML configuration files
-src/        application, ingestion, preprocessing, ML, RAG, and API code
-tests/      smoke tests
-docs/       project and deployment notes
+src/        application, ingestion, preprocessing, ML, RAG-like explanations, API, and UI code
+tests/      unit, smoke, API, ingestion, ER, recommendation, and demo-readiness tests
+docs/       architecture, runbooks, model card, defense docs, and future-work notes
+notebooks/  defense and ER training notebooks
 data/       local data directories kept out of Git
+data_packs/ local portable data packs kept out of Git
 sql/        future SQL transformations by layer
 ```
 
@@ -57,6 +86,12 @@ Pre-API download readiness report: [docs/pre_api_download_readiness.md](docs/pre
 Russian platform analytics summary: [docs/platform_analytics_ru.md](docs/platform_analytics_ru.md).
 Final plan gap analysis RU: [docs/final_plan_gap_analysis_ru.md](docs/final_plan_gap_analysis_ru.md).
 Future work RU: [docs/future_work_ru.md](docs/future_work_ru.md).
+Feature implementation audit RU:
+[docs/platform_feature_implementation_audit_ru.md](docs/platform_feature_implementation_audit_ru.md).
+Future work final review RU:
+[docs/future_work_final_review_ru.md](docs/future_work_final_review_ru.md).
+Demo readiness command reference RU:
+[docs/demo_readiness_command_reference_ru.md](docs/demo_readiness_command_reference_ru.md).
 
 ## Quick Start
 
@@ -67,6 +102,14 @@ make build
 make up
 make db-check
 curl http://localhost:8000/health
+```
+
+If a prepared local data pack is available and you do not need to re-download data from
+external APIs, restore from files instead:
+
+```bash
+make restore-from-files DATA_PACK=data_packs/gip_demo_local
+make demo-readiness
 ```
 
 For live reload development use:
@@ -80,7 +123,10 @@ make up-dev
 
 ```bash
 make test
+make compile
 make lint
+make compose-config
+make ci-check
 make check-sources
 make rawg-check
 make rawg-reference
@@ -120,6 +166,7 @@ make ml-ready-data
 make export-data-pack
 make import-data-pack DATA_PACK=data_packs/gip_demo_local
 make restore-from-files DATA_PACK=data_packs/gip_demo_local
+make data-pack-check DATA_PACK=data_packs/gip_demo_local
 make er-dataset
 make er-rule-baseline
 make er-train
@@ -143,6 +190,9 @@ make notebook-check
 make notebook-export
 make final-smoke
 make graph-analytics
+make code-graph
+make code-graph-watch
+make code-graph-mcp
 make embeddings-research
 make recommendations-hybrid
 make quota-status
@@ -154,7 +204,8 @@ make recommendations
 make rag
 ```
 
-These commands run inside the `worker-dev` container and do not require local Python tooling on the host.
+Most pipeline, test, lint, notebook, and smoke commands run inside the `worker-dev` container
+and do not require local Python tooling on the host.
 `make rawg` runs the safe demo pipeline (`rawg-reference`, `rawg-index`, `rawg-staging`) and does not request details by default.
 `make wikidata` runs the safe targeted pipeline (`wikidata-by-rawg`, `wikidata-staging`) and does not request broad EntityData by default.
 `make wikidata-identity` remains available for the broader SPARQL identity path, but it is not the default MVP route for the first live run.
@@ -181,8 +232,12 @@ These commands run inside the `worker-dev` container and do not require local Py
 `make final-smoke` runs the minimal pre-defense check: demo readiness, API smoke, and notebook check.
 `make embeddings-research` runs the existing TF-IDF/SVD embedding research plus an optional neural-embedding fallback report.
 `make graph-analytics` rebuilds ER graph risk artifacts.
+`make code-graph`, `make code-graph-watch`, and `make code-graph-mcp` build or serve the
+project code graph for architecture navigation.
 `make recommendations-hybrid` writes a separate `hybrid_content_rating_v1` recommendation layer using the safe content baseline as the current fallback.
-`make export-data-pack` and `make restore-from-files` support reproducible file-based restore for limited APIs and should be preferred over repeated broad downloads.
+`make export-data-pack`, `make import-data-pack`, `make restore-from-files`, and
+`make data-pack-check` support reproducible file-based restore for limited APIs and should be
+preferred over repeated broad downloads.
 
 ## Demo Readiness
 
