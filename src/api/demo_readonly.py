@@ -873,6 +873,15 @@ def recommendations(
     effective_seed_game_ids = list(dict.fromkeys([*seed_game_ids, *resolved_ids]))
     if not effective_seed_game_ids:
         payload = artifact_similar_games(None, limit=safe_limit, algorithm=selected_algorithm)
+        payload.update(
+            {
+                "algorithm": selected_algorithm,
+                "seed_game_ids": seed_game_ids,
+                "liked_games": liked_games or [],
+                "resolved_liked_games": resolved_liked_games,
+                "limit": safe_limit,
+            }
+        )
         return add_empty_warning(
             payload,
             subject="recommendation",
