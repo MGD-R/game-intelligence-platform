@@ -40,6 +40,7 @@ def _extract_names(items: object, key: str = "name") -> list[str]:
 
 def _extract_company_rows(items: object) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
     if not isinstance(items, list):
         return rows
     for item in items:
@@ -51,6 +52,10 @@ def _extract_company_rows(items: object) -> list[dict[str, object]]:
             continue
         for role_name in ("developer", "publisher", "porting", "supporting"):
             if item.get(role_name):
+                key = (company_name, role_name)
+                if key in seen:
+                    continue
+                seen.add(key)
                 rows.append({"company_name": company_name, "company_role": role_name})
     return rows
 
@@ -97,6 +102,7 @@ def _extract_external_ids(items: object, game_id: str, now: str) -> list[dict[st
 
 def _extract_url_rows(items: object, game_id: str, now: str) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
     if not isinstance(items, list):
         return rows
     for item in items:
@@ -105,11 +111,16 @@ def _extract_url_rows(items: object, game_id: str, now: str) -> list[dict[str, o
         url = str(item.get("url") or "").strip()
         if not url:
             continue
+        url_type = str(item.get("category") or "website").lower()
+        key = (url_type, url)
+        if key in seen:
+            continue
+        seen.add(key)
         rows.append(
             {
                 "source": "igdb",
                 "source_game_id": game_id,
-                "url_type": str(item.get("category") or "website").lower(),
+                "url_type": url_type,
                 "url": url,
                 "source_specific_json": {},
                 "stg_loaded_at": now,
@@ -304,13 +315,16 @@ def transform_igdb_payloads(raw_payloads: list[tuple[dict[str, Any], str]]) -> I
 
 def load_igdb_payloads(repository: IngestionRepository) -> list[tuple[dict[str, Any], str]]:
     rows = repository.fetch_raw_rows("raw.igdb_games")
-    payloads: list[tuple[dict[str, Any], str]] = []
+    payloads_by_game_id: dict[str, tuple[dict[str, Any], str]] = {}
     for row in rows:
         response_json = row.get("response_json")
         if not isinstance(response_json, dict):
             continue
-        payloads.append((response_json, str(row.get("loaded_at"))))
-    return payloads
+        game_id = str(response_json.get("id") or "").strip()
+        if not game_id:
+            continue
+        payloads_by_game_id[game_id] = (response_json, str(row.get("loaded_at")))
+    return list(payloads_by_game_id.values())
 
 
 def write_bundle(repository: IngestionRepository, bundle: IGDBStagingBundle) -> None:

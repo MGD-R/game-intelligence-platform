@@ -13,6 +13,7 @@ from src.ingestion.igdb_queries import (
     FIELDS_GAMES,
     build_games_by_ids_query,
     build_reference_query,
+    build_search_games_query,
 )
 from src.ingestion.repository import IngestionRepository
 
@@ -101,6 +102,32 @@ class IGDBClient(BaseAPIClient):
         return self.post_apicalypse(
             f"/{endpoint}",
             build_reference_query(endpoint),
+            dry_run=dry_run,
+            force_refresh=force_refresh,
+            from_cache_only=from_cache_only,
+        )
+
+    def search_games(
+        self,
+        query_text: str,
+        *,
+        fields: list[str] | None = None,
+        limit: int = 5,
+        release_year: int | None = None,
+        year_window: int = 0,
+        dry_run: bool = False,
+        force_refresh: bool = False,
+        from_cache_only: bool = False,
+    ) -> IngestionResponse:
+        return self.post_apicalypse(
+            "/games",
+            build_search_games_query(
+                query_text,
+                fields=fields or FIELDS_GAMES,
+                limit=limit,
+                release_year=release_year,
+                year_window=year_window,
+            ),
             dry_run=dry_run,
             force_refresh=force_refresh,
             from_cache_only=from_cache_only,

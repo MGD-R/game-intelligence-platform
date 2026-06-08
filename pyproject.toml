@@ -26,6 +26,13 @@ dev = [
   "pytest>=8.4,<9.0",
   "ruff>=0.12,<1.0",
 ]
+ui = [
+  "requests>=2.32,<3.0",
+  "streamlit>=1.40,<2.0",
+]
+research = [
+  "sentence-transformers>=3.0,<4.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

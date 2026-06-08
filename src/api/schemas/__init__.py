@@ -1,1 +1,1 @@
-"""Schema package placeholder for future API models."""
+"""Schema package for optional API models."""

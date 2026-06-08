@@ -1,1 +1,1 @@
-"""RAG package placeholders."""
+"""Grounded explanation and RAG-adjacent helpers."""

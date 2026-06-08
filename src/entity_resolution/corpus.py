@@ -77,6 +77,8 @@ def _ensure_record(records: dict[tuple[str, str], SourceGameRecord], row: dict[s
         release_year=int(row["release_year"]) if row.get("release_year") is not None else None,
         evidence_sources={str(row["source"])},
     )
+    if row.get("slug"):
+        records[key].external_ids[str(row["source"])] = str(row["slug"])
 
 
 def load_source_records(repository: IngestionRepository) -> dict[tuple[str, str], SourceGameRecord]:

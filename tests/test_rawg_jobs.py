@@ -147,6 +147,26 @@ def test_load_rawg_details_dry_run(monkeypatch, capsys, tmp_path) -> None:
     assert "3498" in capsys.readouterr().out
 
 
+def test_load_rawg_details_ids_file_without_limit_keeps_ids(monkeypatch, capsys, tmp_path) -> None:
+    logger = FakeLogger()
+    ids_file = tmp_path / "ids.txt"
+    ids_file.write_text("3498\n4200\n", encoding="utf-8")
+    monkeypatch.setattr(load_rawg_details, "RawgClient", FakeRawgClient)
+    monkeypatch.setattr(load_rawg_details, "PipelineRunLogger", lambda **_: logger)
+
+    exit_code = load_rawg_details.main(["--dry-run", "--ids-file", str(ids_file)])
+
+    assert exit_code == 0
+    assert logger.finished == {
+        "status": "completed",
+        "metrics": {"requested_ids": 2},
+        "error_message": None,
+    }
+    stdout = capsys.readouterr().out
+    assert "3498" in stdout
+    assert "4200" in stdout
+
+
 def test_parse_ids_combines_sources(tmp_path) -> None:
     ids_file = tmp_path / "ids.txt"
     ids_file.write_text("3498\n4200\n", encoding="utf-8")

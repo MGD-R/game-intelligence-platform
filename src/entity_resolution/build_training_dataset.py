@@ -13,16 +13,28 @@ from src.entity_resolution.io import (
     load_candidate_pairs_frame,
     load_entity_resolution_config,
     load_feature_base_frame,
+    load_reviewed_manual_labels_frame,
     load_source_games_frame,
     resolve_entity_resolution_paths,
 )
 from src.preprocessing.export_ml_ready_base import write_parquet
 
 
+def valid_training_name_expr(column_name: str) -> pl.Expr:
+    stripped = pl.col(column_name).str.strip_chars()
+    return (
+        pl.col(column_name).is_not_null()
+        & (stripped.str.len_chars() > 2)
+        & (~stripped.str.contains(r"^Q[0-9]+$"))
+        & (~stripped.str.contains(r"^[0-9]+$"))
+    )
+
+
 def build_training_frame(
     candidate_pairs: pl.DataFrame,
     feature_base: pl.DataFrame,
     source_games: pl.DataFrame | None = None,
+    manual_review_labels: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
     joined = candidate_pairs.join(feature_base, on="pair_id", how="inner")
     if joined.is_empty():
@@ -48,6 +60,17 @@ def build_training_frame(
         joined = joined.join(left_context, on=["source_a", "source_id_a"], how="left").join(
             right_context, on=["source_b", "source_id_b"], how="left"
         )
+        joined = joined.filter(
+            valid_training_name_expr("name_a") & valid_training_name_expr("name_b")
+        )
+        if joined.is_empty():
+            return joined
+
+    if manual_review_labels is not None and not manual_review_labels.is_empty():
+        labels = manual_review_labels.select(["pair_id", "manual_label"]).unique("pair_id")
+        joined = joined.join(labels, on="pair_id", how="left")
+    else:
+        joined = joined.with_columns(pl.lit(None, dtype=pl.Int64).alias("manual_label"))
 
     config = load_entity_resolution_config()
     positive_sources = {
@@ -58,7 +81,9 @@ def build_training_frame(
 
     joined = joined.with_columns(
         [
-            pl.when(
+            pl.when(pl.col("manual_label").is_not_null())
+            .then(pl.col("manual_label"))
+            .when(
                 (pl.col("label_value") == "1")
                 | pl.col("label_source").is_in(list(positive_sources))
                 | pl.col("external_id_exact_match").fill_null(False)
@@ -66,6 +91,16 @@ def build_training_frame(
             .then(pl.lit(1))
             .otherwise(pl.lit(None))
             .alias("label"),
+            pl.when(pl.col("manual_label").is_not_null())
+            .then(pl.lit("manual_review"))
+            .when(
+                (pl.col("label_value") == "1")
+                | pl.col("label_source").is_in(list(positive_sources))
+                | pl.col("external_id_exact_match").fill_null(False)
+            )
+            .then(pl.lit("weak_positive"))
+            .otherwise(pl.lit(None, dtype=pl.Utf8))
+            .alias("training_label_source"),
             pl.lit(None, dtype=pl.Utf8).alias("synthetic_negative_rule"),
         ]
     )
@@ -100,6 +135,14 @@ def build_training_frame(
             .otherwise(pl.col("label"))
             .alias("label"),
             pl.when(negative_condition_same_name_far_year)
+            .then(pl.lit("synthetic_negative"))
+            .when(negative_condition_different_external_ids)
+            .then(pl.lit("synthetic_negative"))
+            .when(negative_condition_low_name_diff_year)
+            .then(pl.lit("synthetic_negative"))
+            .otherwise(pl.col("training_label_source"))
+            .alias("training_label_source"),
+            pl.when(negative_condition_same_name_far_year)
             .then(pl.lit("same_or_similar_name_different_release_year"))
             .when(negative_condition_different_external_ids)
             .then(pl.lit("different_external_ids"))
@@ -113,11 +156,14 @@ def build_training_frame(
     positive_count = joined.filter(pl.col("label") == 1).height
     negative_cap = max(positive_count * negative_ratio, 0)
     negatives = joined.filter(pl.col("label") == 0)
+    if positive_count == 0:
+        negative_cap = negatives.height
     if negative_cap:
         negatives = negatives.head(negative_cap)
     positives = joined.filter(pl.col("label") == 1)
 
-    labeled = pl.concat([positives, negatives], how="vertical") if negative_cap else positives
+    labeled_parts = [frame for frame in (positives, negatives) if not frame.is_empty()]
+    labeled = pl.concat(labeled_parts, how="vertical") if labeled_parts else joined.head(0)
     if labeled.is_empty():
         return labeled
 
@@ -166,7 +212,12 @@ def main(argv: list[str] | None = None) -> int:
     candidate_pairs = load_candidate_pairs_frame(limit=args.limit)
     feature_base = load_feature_base_frame(limit=args.limit)
     source_games = load_source_games_frame(limit=args.limit)
-    training_frame = build_training_frame(candidate_pairs, feature_base, source_games)
+    training_frame = build_training_frame(
+        candidate_pairs,
+        feature_base,
+        source_games,
+        load_reviewed_manual_labels_frame(limit=args.limit),
+    )
     if training_frame.is_empty() and not args.allow_empty:
         raise RuntimeError(
             "Training dataset is empty. Run `make rawg-demo`, `make wikidata-by-rawg`, "

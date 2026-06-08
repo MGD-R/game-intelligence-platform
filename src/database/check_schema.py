@@ -24,6 +24,7 @@ EXPECTED_TABLES: dict[str, tuple[str, ...]] = {
         "wikipedia_pages",
         "igdb_games",
         "igdb_reference_data",
+        "igdb_search_results",
     ),
     "stg": (
         "source_games",
@@ -42,6 +43,7 @@ EXPECTED_TABLES: dict[str, tuple[str, ...]] = {
     "ml": (
         "entity_candidate_pairs",
         "entity_resolution_features",
+        "igdb_search_candidates",
     ),
     "dm": (
         "canonical_games",

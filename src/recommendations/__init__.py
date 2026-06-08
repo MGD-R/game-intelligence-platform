@@ -1,1 +1,1 @@
-"""Recommendations package placeholders."""
+"""Recommendation builders and rating analysis."""

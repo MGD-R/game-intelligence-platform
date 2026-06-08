@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.preprocessing.wikidata_to_staging import transform_wikidata_payloads
+from src.preprocessing.wikidata_to_staging import parse_release_date, transform_wikidata_payloads
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "wikidata"
 
@@ -44,3 +44,12 @@ def test_transform_uses_sparql_only_when_entity_data_missing() -> None:
     assert len(bundle.source_games) == 1
     assert len(bundle.source_game_external_ids) == 3
     assert bundle.source_game_urls[0]["url_type"] in {"ruwiki", "enwiki"}
+
+
+def test_parse_release_date_ignores_non_date_uri_values() -> None:
+    release_date, release_year = parse_release_date(
+        "http://www.wikidata.org/.well-known/genid/67233b3090e8c484bce101a80dc0a33e"
+    )
+
+    assert release_date is None
+    assert release_year is None

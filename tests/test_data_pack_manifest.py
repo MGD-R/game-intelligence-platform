@@ -27,6 +27,12 @@ class _RepoStub:
             "stg.source_games": 3,
             "stg.source_game_external_ids": 6,
             "ml.entity_candidate_pairs": 1,
+            "ml.entity_resolution_features": 1,
+            "dm.canonical_games": 1,
+            "dm.canonical_game_sources": 2,
+            "dm.canonical_game_aliases": 1,
+            "dm.canonical_game_external_ids": 1,
+            "dm.game_recommendations": 1,
         }
         if source is not None:
             return source_counts.get((table_name, source), 0)
@@ -50,6 +56,10 @@ def test_data_pack_manifest_has_expected_fields(tmp_path: Path) -> None:
     assert manifest["active_sources"] == ["rawg", "wikidata"]
     assert manifest["checked_sources"] == []
     assert manifest["optional_sources"] == []
+    assert manifest["run_status"] in {"completed", "partial", "failed"}
+    assert "ml_ready" in manifest
+    assert "completed_steps" in manifest
+    assert "failed_steps" in manifest
     assert "checksums" in manifest
     assert "secret" not in str(manifest).lower()
     assert manifest_path.exists()

@@ -30,6 +30,7 @@ from src.entity_resolution.io import (
     load_candidate_pairs_frame,
     load_entity_resolution_config,
     load_feature_base_frame,
+    load_reviewed_manual_labels_frame,
     load_source_games_frame,
 )
 from src.entity_resolution.thresholds import decision_from_probability, load_threshold_policy
@@ -69,6 +70,61 @@ def compute_metrics(y_true: list[int], y_pred: list[int], y_prob: list[float]) -
     return metrics
 
 
+def compute_metrics_for_rows(
+    rows: list[dict[str, Any]],
+    y_prob: list[float],
+    *,
+    label_source: str,
+) -> dict[str, Any]:
+    indexes = [
+        index
+        for index, row in enumerate(rows)
+        if str(row.get("training_label_source") or "") == label_source
+    ]
+    if not indexes:
+        return {
+            "label_source": label_source,
+            "row_count": 0,
+            "warnings": [f"no {label_source} rows in evaluation split"],
+        }
+    y_true = [int(rows[index]["label"]) for index in indexes]
+    probabilities = [float(y_prob[index]) for index in indexes]
+    y_pred = [1 if probability >= 0.5 else 0 for probability in probabilities]
+    metrics = compute_metrics(y_true, y_pred, probabilities)
+    metrics["label_source"] = label_source
+    metrics["row_count"] = len(indexes)
+    metrics["positive_label_count"] = int(sum(y_true))
+    metrics["negative_label_count"] = int(len(y_true) - sum(y_true))
+    return metrics
+
+
+def label_source_counts(frame: pl.DataFrame) -> list[dict[str, Any]]:
+    if "training_label_source" not in frame.columns:
+        return []
+    return frame.group_by("training_label_source").len().sort("training_label_source").to_dicts()
+
+
+def sample_weights_for_rows(
+    rows: list[dict[str, Any]],
+    *,
+    manual_label_weight: float,
+    weak_positive_weight: float,
+    synthetic_negative_weight: float,
+) -> list[float]:
+    weights: list[float] = []
+    for row in rows:
+        label_source = str(row.get("training_label_source") or "")
+        if label_source == "manual_review":
+            weights.append(manual_label_weight)
+        elif label_source == "weak_positive":
+            weights.append(weak_positive_weight)
+        elif label_source == "synthetic_negative":
+            weights.append(synthetic_negative_weight)
+        else:
+            weights.append(1.0)
+    return weights
+
+
 def maybe_log_mlflow(enabled: bool, metrics: dict[str, Any], model_name: str) -> list[str]:
     warnings: list[str] = []
     if not enabled:
@@ -94,6 +150,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-empty", action="store_true", help="Allow empty dataset state.")
     parser.add_argument("--limit", type=int, help="Optional row limit.")
     parser.add_argument("--log-mlflow", action="store_true", help="Log to MLflow if available.")
+    parser.add_argument(
+        "--manual-label-weight",
+        type=float,
+        default=1.0,
+        help="Sample weight for human/manual-review labels.",
+    )
+    parser.add_argument(
+        "--weak-positive-weight",
+        type=float,
+        default=0.2,
+        help="Sample weight for weak positive labels.",
+    )
+    parser.add_argument(
+        "--synthetic-negative-weight",
+        type=float,
+        default=0.5,
+        help="Sample weight for synthetic negative labels.",
+    )
     return parser
 
 
@@ -115,6 +189,9 @@ def main(argv: list[str] | None = None) -> int:
                 "allow_empty": args.allow_empty,
                 "limit": args.limit,
                 "log_mlflow": args.log_mlflow,
+                "manual_label_weight": args.manual_label_weight,
+                "weak_positive_weight": args.weak_positive_weight,
+                "synthetic_negative_weight": args.synthetic_negative_weight,
             }
         )
         return 0
@@ -124,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
         load_candidate_pairs_frame(limit=args.limit),
         load_feature_base_frame(limit=args.limit),
         load_source_games_frame(limit=args.limit),
+        load_reviewed_manual_labels_frame(limit=args.limit),
     )
     if training_frame.is_empty():
         if args.allow_empty:
@@ -164,7 +242,13 @@ def main(argv: list[str] | None = None) -> int:
             ),
         ]
     )
-    pipeline.fit(X_train, y_train)
+    train_sample_weights = sample_weights_for_rows(
+        train_rows,
+        manual_label_weight=float(args.manual_label_weight),
+        weak_positive_weight=float(args.weak_positive_weight),
+        synthetic_negative_weight=float(args.synthetic_negative_weight),
+    )
+    pipeline.fit(X_train, y_train, model__sample_weight=train_sample_weights)
     y_prob = pipeline.predict_proba(X_test)[:, 1].tolist()
     y_pred = [1 if probability >= 0.5 else 0 for probability in y_prob]
     metrics = compute_metrics(y_test, y_pred, y_prob)
@@ -174,6 +258,17 @@ def main(argv: list[str] | None = None) -> int:
             "test_row_count": len(test_rows),
             "positive_label_count": int(sum(y)),
             "negative_label_count": int(len(y) - sum(y)),
+            "training_label_source_counts": label_source_counts(training_frame),
+            "sample_weight_policy": {
+                "manual_review": float(args.manual_label_weight),
+                "weak_positive": float(args.weak_positive_weight),
+                "synthetic_negative": float(args.synthetic_negative_weight),
+            },
+            "test_manual_review_metrics": compute_metrics_for_rows(
+                test_rows,
+                y_prob,
+                label_source="manual_review",
+            ),
         }
     )
     mlflow_warnings = maybe_log_mlflow(args.log_mlflow, metrics, "logistic_regression_baseline")

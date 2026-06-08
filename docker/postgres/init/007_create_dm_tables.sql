@@ -36,3 +36,16 @@ CREATE TABLE IF NOT EXISTS dm.canonical_game_external_ids (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_canonical_game_external_ids_value
     ON dm.canonical_game_external_ids (canonical_game_id, external_source, external_id);
+
+CREATE TABLE IF NOT EXISTS dm.game_recommendations (
+    id BIGSERIAL PRIMARY KEY,
+    canonical_game_id UUID NOT NULL REFERENCES dm.canonical_games (canonical_game_id) ON DELETE CASCADE,
+    recommended_canonical_game_id UUID NOT NULL REFERENCES dm.canonical_games (canonical_game_id) ON DELETE CASCADE,
+    rank INTEGER NOT NULL,
+    score NUMERIC(8, 6) NOT NULL,
+    algorithm TEXT NOT NULL,
+    explanation_factors_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (canonical_game_id, algorithm, rank),
+    UNIQUE (canonical_game_id, recommended_canonical_game_id, algorithm)
+);

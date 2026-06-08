@@ -22,6 +22,7 @@ RAW_TABLE_CONFLICT_KEYS: dict[str, list[str]] = {
     "raw.wikipedia_pages": ["source", "endpoint", "request_hash", "source_record_id"],
     "raw.igdb_games": ["source", "endpoint", "request_hash", "source_record_id"],
     "raw.igdb_reference_data": ["source", "endpoint", "request_hash"],
+    "raw.igdb_search_results": ["source", "endpoint", "request_hash", "source_record_id"],
 }
 
 
@@ -43,6 +44,16 @@ def database_dsn_configured() -> bool:
 
 def redacted_database_dsn() -> str:
     return redact_dsn(resolve_database_dsn())
+
+
+def _adapt_staging_value(value: object) -> object:
+    from psycopg.types.json import Jsonb
+
+    if isinstance(value, dict):
+        return Jsonb(value)
+    if isinstance(value, list):
+        return Jsonb(value)
+    return value
 
 
 class IngestionRepository:
@@ -101,6 +112,23 @@ class IngestionRepository:
                 from_cache
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (source, request_hash)
+            WHERE request_hash IS NOT NULL
+            DO UPDATE
+            SET endpoint = EXCLUDED.endpoint,
+                request_method = EXCLUDED.request_method,
+                request_url = EXCLUDED.request_url,
+                request_params_json = EXCLUDED.request_params_json,
+                request_body = EXCLUDED.request_body,
+                from_cache = EXCLUDED.from_cache,
+                http_status = NULL,
+                response_hash = NULL,
+                response_storage_path = NULL,
+                started_at = NOW(),
+                finished_at = NULL,
+                duration_ms = NULL,
+                error_message = NULL,
+                updated_at = NOW()
             RETURNING request_id
         """
         with self.connection() as connection:
@@ -653,6 +681,59 @@ class IngestionRepository:
             with connection.cursor() as cursor:
                 cursor.execute(query)
 
+    def ensure_igdb_search_results_table(self) -> None:
+        query = """
+            CREATE TABLE IF NOT EXISTS raw.igdb_search_results (
+                id BIGSERIAL PRIMARY KEY,
+                request_id UUID REFERENCES meta.api_request_log (request_id),
+                source TEXT NOT NULL DEFAULT 'igdb',
+                endpoint TEXT NOT NULL,
+                request_hash TEXT,
+                source_record_id TEXT,
+                response_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+                response_hash TEXT,
+                response_storage_path TEXT,
+                loaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                from_cache BOOLEAN NOT NULL DEFAULT FALSE,
+                http_status INTEGER,
+                error_message TEXT
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_igdb_search_results_request_record
+                ON raw.igdb_search_results (source, endpoint, request_hash, source_record_id);
+            CREATE INDEX IF NOT EXISTS ix_igdb_search_results_source_record_id
+                ON raw.igdb_search_results (source, source_record_id);
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+
+    def ensure_igdb_search_candidates_table(self) -> None:
+        query = """
+            CREATE TABLE IF NOT EXISTS ml.igdb_search_candidates (
+                candidate_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                source_name TEXT NOT NULL,
+                source_game_id TEXT NOT NULL,
+                candidate_source TEXT NOT NULL DEFAULT 'igdb',
+                igdb_id TEXT NOT NULL,
+                search_rank INTEGER NOT NULL,
+                query_text TEXT NOT NULL,
+                query_strategy TEXT NOT NULL,
+                confidence NUMERIC(5, 4),
+                metadata_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+                retrieved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_igdb_search_candidates_match
+                ON ml.igdb_search_candidates (
+                    source_name,
+                    source_game_id,
+                    candidate_source,
+                    igdb_id
+                );
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+
     def upsert_entity_resolution_features(
         self,
         *,
@@ -729,6 +810,111 @@ class IngestionRepository:
                         Jsonb(dict(features_json)),
                     ),
                 )
+
+    def upsert_igdb_search_candidate(
+        self,
+        *,
+        source_name: str,
+        source_game_id: str,
+        candidate_source: str,
+        igdb_id: str,
+        search_rank: int,
+        query_text: str,
+        query_strategy: str,
+        confidence: float | None,
+        metadata_json: Mapping[str, object],
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        self.ensure_igdb_search_candidates_table()
+        query = """
+            INSERT INTO ml.igdb_search_candidates (
+                source_name,
+                source_game_id,
+                candidate_source,
+                igdb_id,
+                search_rank,
+                query_text,
+                query_strategy,
+                confidence,
+                metadata_json
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (source_name, source_game_id, candidate_source, igdb_id)
+            DO UPDATE
+            SET search_rank = LEAST(ml.igdb_search_candidates.search_rank, EXCLUDED.search_rank),
+                query_text = CASE
+                    WHEN EXCLUDED.search_rank <= ml.igdb_search_candidates.search_rank
+                        THEN EXCLUDED.query_text
+                    ELSE ml.igdb_search_candidates.query_text
+                END,
+                query_strategy = CASE
+                    WHEN EXCLUDED.search_rank <= ml.igdb_search_candidates.search_rank
+                        THEN EXCLUDED.query_strategy
+                    ELSE ml.igdb_search_candidates.query_strategy
+                END,
+                confidence = GREATEST(
+                    COALESCE(ml.igdb_search_candidates.confidence, 0),
+                    COALESCE(EXCLUDED.confidence, 0)
+                ),
+                metadata_json = EXCLUDED.metadata_json,
+                retrieved_at = NOW()
+        """
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (
+                        source_name,
+                        source_game_id,
+                        candidate_source,
+                        igdb_id,
+                        search_rank,
+                        query_text,
+                        query_strategy,
+                        confidence,
+                        Jsonb(dict(metadata_json)),
+                    ),
+                )
+
+    def fetch_igdb_search_candidates(
+        self,
+        *,
+        source_name: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        self.ensure_igdb_search_candidates_table()
+        clauses = [sql.SQL("1 = 1")]
+        params: list[object] = []
+        if source_name is not None:
+            clauses.append(sql.SQL("source_name = %s"))
+            params.append(source_name)
+        query = sql.SQL(
+            """
+            SELECT *
+            FROM ml.igdb_search_candidates
+            WHERE {where_clause}
+            ORDER BY source_name ASC, source_game_id ASC, search_rank ASC, retrieved_at ASC
+            """
+        ).format(where_clause=sql.SQL(" AND ").join(clauses))
+        if limit is not None:
+            query += sql.SQL(" LIMIT %s")
+            params.append(limit)
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                return list(cursor.fetchall())
+
+    def delete_igdb_search_candidates(self, *, source_name: str | None = None) -> None:
+        self.ensure_igdb_search_candidates_table()
+        query = "DELETE FROM ml.igdb_search_candidates"
+        params: tuple[object, ...] = ()
+        if source_name is not None:
+            query += " WHERE source_name = %s"
+            params = (source_name,)
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
 
     def fetch_entity_resolution_features(
         self,
@@ -808,6 +994,50 @@ class IngestionRepository:
                     ),
                 )
 
+    def upsert_entity_resolution_predictions(
+        self,
+        rows: list[Mapping[str, object]],
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        if not rows:
+            return
+        self.ensure_entity_resolution_predictions_table()
+        query = """
+            INSERT INTO ml.entity_resolution_predictions (
+                pair_id,
+                model_name,
+                model_version,
+                same_game_probability,
+                decision,
+                threshold_policy_json,
+                explanation_factors_json
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (pair_id, model_name, model_version)
+            DO UPDATE
+            SET same_game_probability = EXCLUDED.same_game_probability,
+                decision = EXCLUDED.decision,
+                threshold_policy_json = EXCLUDED.threshold_policy_json,
+                explanation_factors_json = EXCLUDED.explanation_factors_json,
+                predicted_at = NOW()
+        """
+        params = [
+            (
+                str(row["pair_id"]),
+                str(row["model_name"]),
+                str(row["model_version"]),
+                float(row["same_game_probability"]),
+                str(row["decision"]),
+                Jsonb(dict(row.get("threshold_policy_json") or {})),
+                Jsonb(dict(row.get("explanation_factors_json") or {})),
+            )
+            for row in rows
+        ]
+        with self.connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.executemany(query, params)
+
     def fetch_entity_resolution_predictions(
         self,
         *,
@@ -862,5 +1092,8 @@ class IngestionRepository:
                 )
                 cursor.executemany(
                     insert_query,
-                    [tuple(row[column] for column in columns) for row in rows],
+                    [
+                        tuple(_adapt_staging_value(row[column]) for column in columns)
+                        for row in rows
+                    ],
                 )

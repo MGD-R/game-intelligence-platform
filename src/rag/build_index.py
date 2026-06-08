@@ -1,11 +1,12 @@
-"""Placeholder CLI for RAG index generation."""
+"""Build grounded RAG explanation artifacts."""
 
 from __future__ import annotations
 
+from src.rag.build_explanations import main as build_explanations_main
 
-def main() -> int:
-    print("TODO: build grounded RAG cards and indexes after recommendations are implemented.")
-    return 0
+
+def main(argv: list[str] | None = None) -> int:
+    return build_explanations_main(argv)
 
 
 if __name__ == "__main__":

@@ -153,6 +153,55 @@ DATASET_SPECS: dict[str, dict[str, object]] = {
             "features_json": pl.Utf8,
         },
     },
+    "canonical_games": {
+        "table": "dm.canonical_games",
+        "required": True,
+        "schema": {
+            "canonical_game_id": pl.Utf8,
+            "canonical_name": pl.Utf8,
+            "release_year": pl.Int64,
+        },
+    },
+    "canonical_game_sources": {
+        "table": "dm.canonical_game_sources",
+        "required": True,
+        "schema": {
+            "canonical_game_id": pl.Utf8,
+            "source": pl.Utf8,
+            "source_game_id": pl.Utf8,
+            "linkage_confidence": pl.Float64,
+        },
+    },
+    "canonical_game_aliases": {
+        "table": "dm.canonical_game_aliases",
+        "required": False,
+        "schema": {
+            "canonical_game_id": pl.Utf8,
+            "alias": pl.Utf8,
+            "language": pl.Utf8,
+        },
+    },
+    "canonical_game_external_ids": {
+        "table": "dm.canonical_game_external_ids",
+        "required": False,
+        "schema": {
+            "canonical_game_id": pl.Utf8,
+            "external_source": pl.Utf8,
+            "external_id": pl.Utf8,
+        },
+    },
+    "game_recommendations": {
+        "table": "dm.game_recommendations",
+        "required": False,
+        "schema": {
+            "canonical_game_id": pl.Utf8,
+            "recommended_canonical_game_id": pl.Utf8,
+            "rank": pl.Int64,
+            "score": pl.Float64,
+            "algorithm": pl.Utf8,
+            "explanation_factors_json": pl.Utf8,
+        },
+    },
     "manual_review_seed": {
         "table": None,
         "required": False,
@@ -231,6 +280,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             table_name = str(spec["table"])
             if table_name.startswith("stg."):
+                rows = repository.fetch_staging_rows(table_name, limit=args.limit)
+            elif table_name.startswith("dm."):
                 rows = repository.fetch_staging_rows(table_name, limit=args.limit)
             elif table_name == "ml.entity_candidate_pairs":
                 rows = candidate_pairs

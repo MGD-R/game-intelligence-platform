@@ -2,9 +2,13 @@
 
 ## Status
 
-Ready for controlled RAWG + Wikidata API download after all checks pass.
+Historical readiness report for the first controlled RAWG + Wikidata API download.
 
-Not yet considered fully complete until the first live end-to-end run is executed and exported to a data-pack.
+Current status has moved beyond this stage: data loading, enrichments, ER, canonical catalog,
+recommendations, grounded explanations, and read-only FastAPI demo endpoints are available.
+Use [final_plan_gap_analysis_ru.md](final_plan_gap_analysis_ru.md) and
+[final_defense_smoke_checklist_ru.md](final_defense_smoke_checklist_ru.md) for the current
+defense status.
 
 ## What Was Checked
 
@@ -81,7 +85,7 @@ Not yet considered fully complete until the first live end-to-end run is execute
 - dry-run auth and client checks do not spend quota or request tokens;
 - recommended first live run should still ignore IGDB until the MVP baseline is verified.
 
-## Recommended First API Download Order
+## Historical First API Download Order
 
 ```bash
 make check-sources-network
@@ -106,6 +110,7 @@ make export-data-pack
 
 ## Known Limitations
 
-- no broad live API ingestion was executed in this readiness pass;
-- readiness is high, but not fully proven until one real RAWG + Wikidata run completes successfully;
-- Steam, Wikipedia, and IGDB should remain follow-up enrichments after the MVP baseline data-pack is produced.
+- this document describes the pre-download checkpoint, not the final project state;
+- broad live ingestion was intentionally skipped in this readiness pass;
+- later project stages added Steam, Wikipedia, IGDB search-lane work, ER, recommendations,
+  explanations, and FastAPI demo coverage.

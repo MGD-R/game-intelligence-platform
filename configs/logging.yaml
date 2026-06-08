@@ -12,3 +12,12 @@ handlers:
 root:
   level: INFO
   handlers: [console]
+loggers:
+  httpx:
+    level: WARNING
+    propagate: false
+    handlers: [console]
+  httpcore:
+    level: WARNING
+    propagate: false
+    handlers: [console]

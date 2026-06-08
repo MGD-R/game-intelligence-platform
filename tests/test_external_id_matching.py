@@ -46,3 +46,13 @@ def test_external_id_matching_is_deterministic() -> None:
     second = find_external_id_matches(build_records())
 
     assert first == second
+
+
+def test_rawg_slug_can_drive_wikidata_match() -> None:
+    records = build_records()
+    records[("rawg", "3498")].external_ids["rawg"] = "grand-theft-auto-v"
+    records[("wikidata", "Q12345")].external_ids["rawg"] = "grand-theft-auto-v"
+
+    matches = find_external_id_matches(records)
+
+    assert matches[0]["source_id_a"] == "3498"

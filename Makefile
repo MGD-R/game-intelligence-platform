@@ -2,19 +2,20 @@ COMPOSE := docker compose
 COMPOSE_DEV := $(COMPOSE) --profile dev
 WORKER_RUN := $(COMPOSE_DEV) run --rm --no-deps --build worker-dev
 
-.PHONY: build build-dev up up-dev up-mlops up-notebook up-admin down logs ps shell db-shell \
-	db-check test test-db lint format check-sources check-sources-network cache-list quota-status \
+.PHONY: build build-dev up up-dev up-mlops up-notebook up-ui up-ui-dev up-admin down logs ps shell db-shell \
+	db-check test test-db compile lint format compose-config ci-check check-sources check-sources-network cache-list quota-status \
 	rawg-check rawg-reference rawg-index rawg-details rawg-staging rawg-demo rawg \
 	wikidata-check wikidata-by-rawg wikidata-identity wikidata-entities wikidata-staging wikidata-demo wikidata full-data-plan \
 	steam-check steam-appids steam-details steam-staging steam-demo steam \
-	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-demo igdb \
+	igdb-check igdb-ids igdb-reference igdb-games igdb-staging igdb-search-seeds igdb-search igdb-search-candidates igdb-search-demo igdb-demo igdb \
 	wikipedia-check wikipedia-pages wikipedia-load wikipedia-staging wikipedia-demo wikipedia \
 	match-external-ids candidate-pairs feature-base source-coverage export-ml-base entity-data-base \
-	validate-staging validate-ml-data manual-review-seed dataset-manifest export-ml-ready \
+	validate-staging validate-ml-data manual-review-seed manual-review-db manual-review-db-seed canonical-v0 canonical-v1 dataset-manifest export-ml-ready \
 	ml-ready-data data-stage dq anomalies export-analysis data-quality \
-	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-review-queue \
-	er-baseline export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
-	recommendations rag demo-data all
+	staging er er-dataset er-rule-baseline er-train er-predict er-evaluate er-training-report er-review-queue er-export-review-queue \
+	er-baseline er-merge-strategy-comparison er-graph-analysis er-embedding-research igdb-matching-analysis ml-research-defense ml-defense-readiness ml-defense-presentation ml-defense-all code-graph code-graph-watch code-graph-mcp export-data-pack import-data-pack restore-from-files export-raw-cache data-pack-check \
+	demo-readiness api-smoke notebook-check notebook-export final-smoke embeddings-research graph-analytics \
+	recommendations recommendations-hybrid bayesian-rating rag-explanations rag demo-data all
 
 DATA_PACK ?= data_packs/gip_demo_local
 
@@ -36,17 +37,24 @@ up-mlops:
 up-notebook:
 	$(COMPOSE) --profile notebook up -d postgres app worker notebook
 
+up-ui:
+	$(COMPOSE) --profile ui up -d --build postgres app ui
+
+up-ui-dev:
+	$(COMPOSE_DEV) up -d --build postgres app-dev worker-dev
+	API_BASE_URL=http://app-dev:8000 $(COMPOSE) --profile ui up -d --build --no-deps ui
+
 up-admin:
 	$(COMPOSE) --profile admin up -d postgres app worker pgadmin
 
 down:
-	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin down --remove-orphans
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile ui --profile admin down --remove-orphans
 
 logs:
-	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin logs -f --tail=100
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile ui --profile admin logs -f --tail=100
 
 ps:
-	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile admin ps
+	$(COMPOSE) --profile dev --profile mlops --profile notebook --profile ui --profile admin ps
 
 shell:
 	$(COMPOSE_DEV) run --rm worker-dev /bin/sh
@@ -66,11 +74,23 @@ test-db:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m pytest tests/test_raw_idempotency.py
 
+compile:
+	$(WORKER_RUN) python -m compileall src tests
+
 lint:
 	$(WORKER_RUN) python -m ruff check src tests
 
 format:
 	$(WORKER_RUN) python -m ruff format src tests
+
+compose-config:
+	$(COMPOSE) --profile dev --profile notebook --profile ui --profile admin --profile mlops config -q
+
+ci-check:
+	$(MAKE) compile
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) compose-config
 
 check-sources:
 	$(WORKER_RUN) python -m src.ingestion.check_sources --no-network
@@ -196,6 +216,22 @@ igdb-staging:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.igdb_to_staging
 
+igdb-search-seeds:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.select_igdb_search_seeds
+
+igdb-search:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.ingestion.jobs.load_igdb_search
+
+igdb-search-candidates:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.igdb_search_to_candidates
+
+igdb-search-demo: igdb-search igdb-staging
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.preprocessing.igdb_search_to_candidates --promote-pairs
+
 igdb-demo: igdb-ids igdb-games igdb-staging
 
 wikipedia:
@@ -246,6 +282,22 @@ manual-review-seed:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.build_manual_review_seed
 
+manual-review-db:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.setup_manual_review
+
+manual-review-db-seed:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.seed_manual_review_queue
+
+canonical-v0:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.build_canonical_v0
+
+canonical-v1:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.build_canonical_v0 --version v1
+
 dataset-manifest:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.preprocessing.build_dataset_manifest
@@ -285,19 +337,111 @@ er-evaluate:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.evaluate_model
 
+er-training-report:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.export_training_report
+
 er-review-queue:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.build_manual_review_queue
+
+er-export-review-queue:
+	$(COMPOSE) up -d postgres
+	$(WORKER_RUN) python -m src.entity_resolution.export_manual_review_queue --status pending
 
 er-baseline:
 	$(COMPOSE) up -d postgres
 	$(WORKER_RUN) python -m src.entity_resolution.run_baseline_pipeline
 
+er-merge-strategy-comparison:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.entity_resolution.compare_merge_strategies
+
+er-graph-analysis:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.entity_resolution.build_graph_analysis
+
+er-embedding-research:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.entity_resolution.build_embedding_research
+
+igdb-matching-analysis:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.entity_resolution.build_igdb_matching_analysis
+
+ml-research-defense:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.entity_resolution.build_research_defense_artifacts
+
+ml-defense-readiness:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.devtools.build_ml_defense_readiness
+
+ml-defense-presentation:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.devtools.build_ml_defense_presentation
+
+ml-defense-all:
+	$(MAKE) er-merge-strategy-comparison
+	$(MAKE) er-graph-analysis
+	$(MAKE) er-embedding-research
+	$(MAKE) igdb-matching-analysis
+	$(MAKE) ml-research-defense
+	$(MAKE) bayesian-rating
+	$(MAKE) rag-explanations
+	$(MAKE) ml-defense-readiness
+	$(MAKE) ml-defense-presentation
+
+demo-readiness:
+	$(WORKER_RUN) python -m src.demo.check_readiness
+
+api-smoke:
+	$(WORKER_RUN) python -m src.devtools.api_smoke --base-url $${API_BASE_URL:-http://app-dev:8000}
+
+notebook-check:
+	$(WORKER_RUN) python -m src.devtools.notebook_check
+
+notebook-export:
+	$(COMPOSE) --profile notebook run --rm notebook python -m src.devtools.notebook_export
+
+final-smoke:
+	$(MAKE) demo-readiness
+	$(MAKE) api-smoke
+	$(MAKE) notebook-check
+
+embeddings-research:
+	$(MAKE) er-embedding-research
+	$(WORKER_RUN) python -m src.research.neural_embeddings
+
+graph-analytics:
+	$(MAKE) er-graph-analysis
+
+code-graph:
+	$(WORKER_RUN) python -m src.devtools.code_graph --once
+
+code-graph-watch:
+	$(WORKER_RUN) python -m src.devtools.code_graph --watch
+
+code-graph-mcp:
+	$(WORKER_RUN) python -m src.devtools.code_graph_mcp
+
 recommendations:
 	$(WORKER_RUN) python -m src.recommendations.build_recommendations
 
-rag:
-	$(WORKER_RUN) python -m src.rag.build_index
+recommendations-hybrid:
+	$(WORKER_RUN) python -m src.recommendations.build_recommendations \
+		--algorithm hybrid_content_rating_v1 \
+		--report-path data/artifacts/reports/recommendations/hybrid_content_rating_recommendations.csv
+
+bayesian-rating:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.recommendations.build_bayesian_rating_analysis
+
+rag-explanations:
+	$(COMPOSE_DEV) up -d postgres worker-dev
+	$(COMPOSE_DEV) exec -T worker-dev python -m src.rag.build_explanations
+
+rag: rag-explanations
 
 demo-data:
 	$(MAKE) rawg-demo

@@ -20,6 +20,7 @@ x-dev-volumes: &dev-volumes
   - ./data:/app/data
   - ./data_packs:/app/data_packs
   - ./docker:/app/docker
+  - ./notebooks:/app/notebooks
   - ./sql:/app/sql
   - ./tests:/app/tests
   - ./pyproject.toml:/app/pyproject.toml:ro
@@ -57,6 +58,9 @@ services:
     command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro
+      - ./data_packs:/app/data_packs:ro
     healthcheck:
       test:
         [
@@ -186,6 +190,31 @@ services:
       - "8888:8888"
     volumes:
       - ./:/app
+    networks:
+      - gip-net
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui/Dockerfile
+    container_name: gip-ui
+    profiles: ["ui"]
+    env_file: *app-env-files
+    environment:
+      API_BASE_URL: "${API_BASE_URL:-http://app:8000}"
+    command:
+      [
+        "streamlit",
+        "run",
+        "src/ui/streamlit_app.py",
+        "--server.address=0.0.0.0",
+        "--server.port=8501",
+      ]
+    ports:
+      - "8501:8501"
+    depends_on:
+      app:
+        condition: service_started
     networks:
       - gip-net
 

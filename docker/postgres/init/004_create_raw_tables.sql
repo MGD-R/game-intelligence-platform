@@ -195,3 +195,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_igdb_reference_data_request
 
 CREATE INDEX IF NOT EXISTS ix_igdb_reference_data_source_record_id
     ON raw.igdb_reference_data (source, source_record_id);
+
+CREATE TABLE IF NOT EXISTS raw.igdb_search_results (
+    id BIGSERIAL PRIMARY KEY,
+    request_id UUID REFERENCES meta.api_request_log (request_id),
+    source TEXT NOT NULL DEFAULT 'igdb',
+    endpoint TEXT NOT NULL,
+    request_hash TEXT,
+    source_record_id TEXT,
+    response_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+    response_hash TEXT,
+    response_storage_path TEXT,
+    loaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    from_cache BOOLEAN NOT NULL DEFAULT FALSE,
+    http_status INTEGER,
+    error_message TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_igdb_search_results_request_record
+    ON raw.igdb_search_results (source, endpoint, request_hash, source_record_id);
+
+CREATE INDEX IF NOT EXISTS ix_igdb_search_results_source_record_id
+    ON raw.igdb_search_results (source, source_record_id);

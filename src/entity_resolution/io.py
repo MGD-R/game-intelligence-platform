@@ -108,6 +108,48 @@ def load_manual_review_seed_frame(*, limit: int | None = None) -> pl.DataFrame:
     return frame.head(limit) if limit is not None else frame
 
 
+def load_reviewed_manual_labels_frame(
+    repository: IngestionRepository | None = None,
+    *,
+    limit: int | None = None,
+) -> pl.DataFrame:
+    query = """
+        SELECT
+            pair_id::TEXT AS pair_id,
+            CASE WHEN review_label THEN 1 ELSE 0 END AS manual_label,
+            selection_strategy,
+            reviewer,
+            review_notes,
+            reviewed_at
+        FROM ml.entity_resolution_manual_reviews
+        WHERE review_status = 'reviewed'
+          AND review_label IS NOT NULL
+        ORDER BY reviewed_at ASC, pair_id ASC
+    """
+    params: tuple[object, ...] = ()
+    if limit is not None:
+        query += " LIMIT %s"
+        params = (limit,)
+
+    repository = repository or IngestionRepository()
+    with repository.connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            rows = list(cursor.fetchall())
+
+    schema = {
+        "pair_id": pl.Utf8,
+        "manual_label": pl.Int64,
+        "selection_strategy": pl.Utf8,
+        "reviewer": pl.Utf8,
+        "review_notes": pl.Utf8,
+        "reviewed_at": pl.Datetime(time_zone="UTC"),
+    }
+    if not rows:
+        return pl.DataFrame(schema=schema)
+    return pl.DataFrame(rows, schema=schema)
+
+
 def load_source_games_frame(
     repository: IngestionRepository | None = None,
     *,

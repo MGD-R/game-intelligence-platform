@@ -5,7 +5,7 @@ from pathlib import Path
 
 import polars as pl
 
-from src.entity_resolution.train_baseline_model import main
+from src.entity_resolution.train_baseline_model import main, sample_weights_for_rows
 
 
 def test_train_baseline_model_handles_tiny_fixture_dataset(monkeypatch, tmp_path: Path) -> None:
@@ -105,6 +105,10 @@ def test_train_baseline_model_handles_tiny_fixture_dataset(monkeypatch, tmp_path
         lambda *args, **kwargs: pl.DataFrame(),
     )
     monkeypatch.setattr(
+        "src.entity_resolution.train_baseline_model.load_reviewed_manual_labels_frame",
+        lambda *args, **kwargs: pl.DataFrame(),
+    )
+    monkeypatch.setattr(
         "src.entity_resolution.train_baseline_model.ensure_output_directories",
         lambda: type(
             "P",
@@ -123,4 +127,21 @@ def test_train_baseline_model_handles_tiny_fixture_dataset(monkeypatch, tmp_path
     assert (models_dir / "logistic_regression_baseline.joblib").exists()
     metrics = json.loads((reports_dir / "metrics.json").read_text(encoding="utf-8"))
     assert "precision" in metrics
+    assert metrics["sample_weight_policy"]["weak_positive"] == 0.2
     assert (predictions_dir / "predictions.parquet").exists()
+
+
+def test_sample_weights_prioritize_manual_labels() -> None:
+    weights = sample_weights_for_rows(
+        [
+            {"training_label_source": "manual_review"},
+            {"training_label_source": "weak_positive"},
+            {"training_label_source": "synthetic_negative"},
+            {"training_label_source": None},
+        ],
+        manual_label_weight=1.0,
+        weak_positive_weight=0.2,
+        synthetic_negative_weight=0.5,
+    )
+
+    assert weights == [1.0, 0.2, 0.5, 1.0]

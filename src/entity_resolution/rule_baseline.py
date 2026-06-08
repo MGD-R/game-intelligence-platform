@@ -13,6 +13,7 @@ from src.entity_resolution.io import (
     ensure_er_inputs,
     load_candidate_pairs_frame,
     load_feature_base_frame,
+    load_reviewed_manual_labels_frame,
     load_source_games_frame,
     resolve_entity_resolution_paths,
 )
@@ -81,7 +82,7 @@ def build_rule_predictions(frame: pl.DataFrame) -> pl.DataFrame:
                 "explanation_factors_json": {"reasons": reasons},
             }
         )
-    return pl.DataFrame(rows)
+    return pl.DataFrame(rows, infer_schema_length=None)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -115,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         load_candidate_pairs_frame(limit=args.limit),
         load_feature_base_frame(limit=args.limit),
         load_source_games_frame(limit=args.limit),
+        load_reviewed_manual_labels_frame(limit=args.limit),
     )
     if frame.is_empty() and not args.allow_empty:
         raise RuntimeError("Rule baseline input is empty. Run `make ml-ready-data` first.")

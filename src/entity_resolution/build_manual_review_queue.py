@@ -6,12 +6,47 @@ import argparse
 
 import polars as pl
 
-from src.entity_resolution.io import ensure_output_directories
+from src.entity_resolution.io import ensure_output_directories, load_source_games_frame
 
 
-def build_review_queue(frame: pl.DataFrame) -> pl.DataFrame:
+def enrich_review_context(frame: pl.DataFrame, source_games: pl.DataFrame) -> pl.DataFrame:
+    if source_games.is_empty() or {"name_a", "name_b"}.issubset(set(frame.columns)):
+        return frame
+    left_context = source_games.select(
+        [
+            pl.col("source").alias("source_a"),
+            pl.col("source_game_id").alias("source_id_a"),
+            pl.col("name").alias("name_a"),
+            pl.col("release_year").alias("release_year_a"),
+        ]
+    )
+    right_context = source_games.select(
+        [
+            pl.col("source").alias("source_b"),
+            pl.col("source_game_id").alias("source_id_b"),
+            pl.col("name").alias("name_b"),
+            pl.col("release_year").alias("release_year_b"),
+        ]
+    )
+    enriched = frame
+    if "name_a" not in enriched.columns:
+        enriched = enriched.join(left_context, on=["source_a", "source_id_a"], how="left")
+    if "name_b" not in enriched.columns:
+        enriched = enriched.join(right_context, on=["source_b", "source_id_b"], how="left")
+    return enriched
+
+
+def build_review_queue(
+    frame: pl.DataFrame,
+    source_games: pl.DataFrame | None = None,
+) -> pl.DataFrame:
     if frame.is_empty():
         return frame
+    if source_games is not None:
+        frame = enrich_review_context(frame, source_games)
+    for column_name in ("name_a", "release_year_a", "name_b", "release_year_b"):
+        if column_name not in frame.columns:
+            frame = frame.with_columns(pl.lit(None).alias(column_name))
     prioritized = (
         frame.with_columns(
             [
@@ -73,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         raise RuntimeError("Predictions artifact missing. Run `make er-predict` first.")
 
-    queue = build_review_queue(pl.read_parquet(predictions_path))
+    queue = build_review_queue(pl.read_parquet(predictions_path), load_source_games_frame())
     queue.write_parquet(queue_path)
     queue.write_csv(report_path)
     print({"manual_review_queue_count": queue.height, "queue_path": str(queue_path)})
